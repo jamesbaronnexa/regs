@@ -19,6 +19,7 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
   const renderTaskRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   
   // Touch gesture refs - simplified
   const touchStartX = useRef(null)
@@ -27,6 +28,8 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
   const lastTapTime = useRef(0)
   const pinchStartDistance = useRef(null)
   const initialPinchZoom = useRef(1)
+  const isPanning = useRef(false)
+  const lastPanOffset = useRef({ x: 0, y: 0 })
 
   // Load PDF.js from CDN
   useEffect(() => {
@@ -78,10 +81,11 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
     if (!pdfDoc) return
     if (pageNumber === lastRenderedPage) return
     
-    // Reset zoom when changing pages
+    // Reset zoom and pan when changing pages
     setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
     if (canvasRef.current) {
-      canvasRef.current.style.transform = 'scale(1)'
+      canvasRef.current.style.transform = 'scale(1) translate(0px, 0px)'
     }
     
     renderPage(pdfDoc, pageNumber)
@@ -130,11 +134,18 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
           handleDoubleTap()
         }
         lastTapTime.current = now
+        
+        // Start panning if zoomed
+        if (zoomLevel > 1) {
+          isPanning.current = true
+          lastPanOffset.current = { ...panOffset }
+        }
       } else if (e.touches.length === 2) {
         // Start pinch zoom
         e.preventDefault()
         pinchStartDistance.current = getDistance(e.touches)
         initialPinchZoom.current = zoomLevel
+        isPanning.current = false
       }
     }
 
@@ -148,14 +159,32 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
         setZoomLevel(newZoom)
         
         if (canvasRef.current) {
-          canvasRef.current.style.transform = `scale(${newZoom})`
+          canvasRef.current.style.transform = `scale(${newZoom}) translate(${panOffset.x}px, ${panOffset.y}px)`
+        }
+      } else if (e.touches.length === 1 && isPanning.current && zoomLevel > 1) {
+        // Handle panning when zoomed
+        e.preventDefault()
+        const deltaX = e.touches[0].clientX - touchStartX.current
+        const deltaY = e.touches[0].clientY - touchStartY.current
+        
+        // Calculate new offset with bounds
+        const maxOffset = (zoomLevel - 1) * 150
+        const newOffset = {
+          x: Math.max(-maxOffset, Math.min(maxOffset, lastPanOffset.current.x + deltaX)),
+          y: Math.max(-maxOffset, Math.min(maxOffset, lastPanOffset.current.y + deltaY))
+        }
+        
+        setPanOffset(newOffset)
+        
+        if (canvasRef.current) {
+          canvasRef.current.style.transform = `scale(${zoomLevel}) translate(${newOffset.x}px, ${newOffset.y}px)`
         }
       }
     }
 
     const handleTouchEnd = (e) => {
-      // Only handle swipe if not zoomed and single touch
-      if (e.changedTouches.length === 1 && zoomLevel === 1 && touchStartX.current && touchStartY.current) {
+      // Only handle swipe if not zoomed, not panning, and single touch
+      if (e.changedTouches.length === 1 && zoomLevel === 1 && !isPanning.current && touchStartX.current && touchStartY.current) {
         const touchEndX = e.changedTouches[0].clientX
         const touchEndY = e.changedTouches[0].clientY
         const touchEndTime = Date.now()
@@ -183,13 +212,22 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
       touchStartY.current = null
       touchStartTime.current = null
       pinchStartDistance.current = null
+      isPanning.current = false
     }
 
     const handleDoubleTap = () => {
       const newZoom = zoomLevel > 1 ? 1 : 2
       setZoomLevel(newZoom)
-      if (canvasRef.current) {
-        canvasRef.current.style.transform = `scale(${newZoom})`
+      
+      if (newZoom === 1) {
+        setPanOffset({ x: 0, y: 0 })
+        if (canvasRef.current) {
+          canvasRef.current.style.transform = 'scale(1) translate(0px, 0px)'
+        }
+      } else {
+        if (canvasRef.current) {
+          canvasRef.current.style.transform = `scale(2) translate(${panOffset.x}px, ${panOffset.y}px)`
+        }
       }
     }
 
@@ -202,7 +240,7 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
       viewport.removeEventListener('touchmove', handleTouchMove)
       viewport.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [pageNumber, numPages, rendering, onPageChange, zoomLevel])
+  }, [pageNumber, numPages, rendering, onPageChange, zoomLevel, panOffset])
 
   async function renderPage(pdf, pageNum) {
     if (!pdf || !canvasRef.current || !containerRef.current) return
@@ -290,7 +328,7 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
       
       // Apply zoom transform
       if (canvasRef.current) {
-        canvasRef.current.style.transform = `scale(${zoomLevel})`
+        canvasRef.current.style.transform = `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`
         canvasRef.current.style.transformOrigin = 'center center'
       }
       
@@ -320,22 +358,26 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
     const newZoom = Math.min(zoomLevel * 1.5, 3)
     setZoomLevel(newZoom)
     if (canvasRef.current) {
-      canvasRef.current.style.transform = `scale(${newZoom})`
+      canvasRef.current.style.transform = `scale(${newZoom}) translate(${panOffset.x}px, ${panOffset.y}px)`
     }
   }
 
   function handleZoomOut() {
     const newZoom = Math.max(zoomLevel / 1.5, 1)
     setZoomLevel(newZoom)
+    if (newZoom === 1) {
+      setPanOffset({ x: 0, y: 0 })
+    }
     if (canvasRef.current) {
-      canvasRef.current.style.transform = `scale(${newZoom})`
+      canvasRef.current.style.transform = `scale(${newZoom}) translate(${panOffset.x}px, ${panOffset.y}px)`
     }
   }
 
   function handleFitWidth() {
     setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
     if (canvasRef.current) {
-      canvasRef.current.style.transform = 'scale(1)'
+      canvasRef.current.style.transform = 'scale(1) translate(0px, 0px)'
     }
   }
 
