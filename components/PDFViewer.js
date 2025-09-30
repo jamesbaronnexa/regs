@@ -280,7 +280,7 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
       const containerWidth = window.innerWidth - padding
       const containerHeight = window.innerHeight - 120 // Account for header/controls
       
-      let calculatedScale = Math.min(
+      let displayScale = Math.min(
         containerWidth / baseViewport.width,
         containerHeight / baseViewport.height
       )
@@ -293,68 +293,42 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
         // In landscape or mobile, prioritize filling the screen
         if (isLandscape) {
           // In landscape, use height as constraint but ensure good width usage
-          calculatedScale = containerHeight / baseViewport.height
+          displayScale = containerHeight / baseViewport.height
           // Check if this makes it too wide
-          if (baseViewport.width * calculatedScale > containerWidth) {
-            calculatedScale = containerWidth / baseViewport.width
+          if (baseViewport.width * displayScale > containerWidth) {
+            displayScale = containerWidth / baseViewport.width
           }
         } else {
           // Portrait mode - fit to width
-          calculatedScale = containerWidth / baseViewport.width
+          displayScale = containerWidth / baseViewport.width
         }
-        
-        // Increase resolution for quality (2x for retina displays)
-        const renderScale = calculatedScale * (window.devicePixelRatio || 2)
-        setBaseScale(renderScale)
-        
-        const viewport = page.getViewport({ scale: renderScale })
-        
-        const canvas = canvasRef.current
-        const ctx = canvas.getContext('2d')
-        // Clear & size canvas
-        ctx.setTransform(1, 0, 0, 1, 0, 0)
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        canvas.width = viewport.width
-        canvas.height = viewport.height
-        
-        // Set canvas display size to fit screen properly
-        canvas.style.width = `${baseViewport.width * calculatedScale}px`
-        canvas.style.height = `${baseViewport.height * calculatedScale}px`
-        
-        const container = containerRef.current
-        container.style.position = 'relative'
-        container.style.width = `${baseViewport.width * calculatedScale}px`
-        container.style.height = `${baseViewport.height * calculatedScale}px`
-      } else {
-        // Desktop - similar logic but with more padding
-        calculatedScale *= 1.5
-        setBaseScale(calculatedScale)
-        
-        const viewport = page.getViewport({ scale: calculatedScale })
-        
-        const canvas = canvasRef.current
-        const ctx = canvas.getContext('2d')
-        ctx.setTransform(1, 0, 0, 1, 0, 0)
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        canvas.width = viewport.width
-        canvas.height = viewport.height
-        
-        const displayScale = calculatedScale / 1.5
-        canvas.style.width = `${baseViewport.width * displayScale}px`
-        canvas.style.height = `${baseViewport.height * displayScale}px`
-        
-        const container = containerRef.current
-        container.style.position = 'relative'
-        container.style.width = `${baseViewport.width * displayScale}px`
-        container.style.height = `${baseViewport.height * displayScale}px`
       }
+      
+      // Increase resolution for quality (2x for retina displays)
+      const renderScale = displayScale * (window.devicePixelRatio || 2)
+      setBaseScale(renderScale)
+      
+      const viewport = page.getViewport({ scale: renderScale })
+      
+      const canvas = canvasRef.current
+      const ctx = canvas.getContext('2d')
+      // Clear & size canvas
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      canvas.width = viewport.width
+      canvas.height = viewport.height
+      
+      // Set canvas display size to fit screen properly
+      canvas.style.width = `${baseViewport.width * displayScale}px`
+      canvas.style.height = `${baseViewport.height * displayScale}px`
+      
+      const container = containerRef.current
+      container.style.position = 'relative'
+      container.style.width = `${baseViewport.width * displayScale}px`
+      container.style.height = `${baseViewport.height * displayScale}px`
 
       if (textLayerRef.current) textLayerRef.current.remove()
       container.querySelectorAll('.pdf-highlight-box').forEach((el) => el.remove())
-
-      // Continue with rendering...
-      const renderScale = baseScale
-      const viewport = page.getViewport({ scale: renderScale })
 
       const textLayerDiv = document.createElement('div')
       textLayerDiv.className = 'textLayer'
@@ -474,9 +448,9 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow-2xl p-3 max-w-[90vw] max-h-[90vh] w-full sm:w-auto">
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-2 gap-2">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2">
+      <div className="bg-white rounded-xl shadow-2xl p-2 sm:p-3 w-full h-full max-w-[98vw] max-h-[98vh] flex flex-col">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-2 gap-2 flex-shrink-0">
           <div className="text-sm text-gray-600">
             Page {pageNumber} {numPages ? `of ${numPages}` : ''} 
             {zoomLevel > 1 && ` · ${Math.round(zoomLevel * 100)}%`}
@@ -493,23 +467,19 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
         </div>
         <div 
           ref={viewportRef}
-          className="relative overflow-auto" 
+          className="relative overflow-auto flex-grow flex items-center justify-center" 
           style={{ 
-            maxWidth: '90vw', 
-            maxHeight: '80vh',
             touchAction: zoomLevel > 1 ? 'none' : 'auto'
           }}
         >
           <div ref={containerRef} style={{ 
             position: 'relative',
-            margin: '0 auto',
             transition: 'none'
           }}>
             <canvas 
               ref={canvasRef} 
               style={{ 
                 display: 'block',
-                margin: '0 auto',
                 transition: 'transform 0.1s ease-out',
                 transformOrigin: 'center center'
               }} 
