@@ -9,6 +9,7 @@ const PDFJS_WORKER = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERS
 export default function PDFViewer({ url, pageNumber, onClose, onPageChange, highlightPhrases = [] }) {
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
+  const viewportRef = useRef(null)
   const textLayerRef = useRef(null)
   const pdfjsRef = useRef(null)
   const [pdfDoc, setPdfDoc] = useState(null)
@@ -17,14 +18,21 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
   const [lastRenderedPage, setLastRenderedPage] = useState(null)
   const renderTaskRef = useRef(null)
   const [ready, setReady] = useState(false)
-  const [scale, setScale] = useState(1.5)
+  const [baseScale, setBaseScale] = useState(1.5)
+  const [zoomLevel, setZoomLevel] = useState(1)
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   
   // Touch gesture refs
   const touchStartX = useRef(null)
   const touchStartY = useRef(null)
   const touchStartTime = useRef(null)
+  const lastTapTime = useRef(0)
+  const pinchStartDistance = useRef(null)
+  const lastPinchZoom = useRef(1)
+  const isPanning = useRef(false)
+  const lastPanOffset = useRef({ x: 0, y: 0 })
 
-  // Load PDF.js from CDN (avoids Next/Webpack import issues)
+  // Load PDF.js from CDN
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (window.pdfjsLib) {
@@ -72,8 +80,11 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
   // Render when pageNumber changes
   useEffect(() => {
     if (!pdfDoc) return
-    if (pageNumber === lastRenderedPage) return
+    if (pageNumber === lastRenderedPage && zoomLevel === lastPinchZoom.current) return
     renderPage(pdfDoc, pageNumber)
+    // Reset zoom and pan when changing pages
+    setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pdfDoc, pageNumber])
 
@@ -96,58 +107,149 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
     }
   }, [pdfDoc, pageNumber])
 
-  // Touch handlers for swipe gestures
+  // Touch handlers for swipe, pinch, and pan gestures
   useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
+    const viewport = viewportRef.current
+    if (!viewport) return
+
+    const getDistance = (touches) => {
+      const dx = touches[0].clientX - touches[1].clientX
+      const dy = touches[0].clientY - touches[1].clientY
+      return Math.sqrt(dx * dx + dy * dy)
+    }
 
     const handleTouchStart = (e) => {
-      touchStartX.current = e.touches[0].clientX
-      touchStartY.current = e.touches[0].clientY
-      touchStartTime.current = Date.now()
+      if (e.touches.length === 1) {
+        touchStartX.current = e.touches[0].clientX
+        touchStartY.current = e.touches[0].clientY
+        touchStartTime.current = Date.now()
+        
+        // Check for double tap
+        const now = Date.now()
+        if (now - lastTapTime.current < 300) {
+          e.preventDefault()
+          handleDoubleTap(e.touches[0].clientX, e.touches[0].clientY)
+        }
+        lastTapTime.current = now
+        
+        // Start panning if zoomed in
+        if (zoomLevel > 1) {
+          isPanning.current = true
+          lastPanOffset.current = { ...panOffset }
+        }
+      } else if (e.touches.length === 2) {
+        // Start pinch zoom
+        e.preventDefault()
+        pinchStartDistance.current = getDistance(e.touches)
+        lastPinchZoom.current = zoomLevel
+        isPanning.current = false
+      }
+    }
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 2 && pinchStartDistance.current) {
+        // Handle pinch zoom
+        e.preventDefault()
+        const currentDistance = getDistance(e.touches)
+        const scale = currentDistance / pinchStartDistance.current
+        const newZoom = Math.max(1, Math.min(4, lastPinchZoom.current * scale))
+        setZoomLevel(newZoom)
+        
+        // Update canvas transform immediately for smooth zoom
+        if (canvasRef.current) {
+          const canvas = canvasRef.current
+          canvas.style.transform = `scale(${newZoom}) translate(${panOffset.x / newZoom}px, ${panOffset.y / newZoom}px)`
+        }
+      } else if (e.touches.length === 1 && isPanning.current && zoomLevel > 1) {
+        // Handle panning when zoomed in
+        e.preventDefault()
+        const deltaX = e.touches[0].clientX - touchStartX.current
+        const deltaY = e.touches[0].clientY - touchStartY.current
+        
+        const newOffset = {
+          x: lastPanOffset.current.x + deltaX,
+          y: lastPanOffset.current.y + deltaY
+        }
+        
+        // Limit panning to keep content in view
+        const maxPan = (zoomLevel - 1) * 200
+        newOffset.x = Math.max(-maxPan, Math.min(maxPan, newOffset.x))
+        newOffset.y = Math.max(-maxPan, Math.min(maxPan, newOffset.y))
+        
+        setPanOffset(newOffset)
+        
+        if (canvasRef.current) {
+          canvasRef.current.style.transform = `scale(${zoomLevel}) translate(${newOffset.x / zoomLevel}px, ${newOffset.y / zoomLevel}px)`
+        }
+      }
     }
 
     const handleTouchEnd = (e) => {
-      if (!touchStartX.current || !touchStartY.current) return
+      // Handle swipe for page navigation (only when not zoomed)
+      if (zoomLevel === 1 && touchStartX.current && touchStartY.current && !isPanning.current) {
+        const touchEndX = e.changedTouches[0].clientX
+        const touchEndY = e.changedTouches[0].clientY
+        const touchEndTime = Date.now()
 
-      const touchEndX = e.changedTouches[0].clientX
-      const touchEndY = e.changedTouches[0].clientY
-      const touchEndTime = Date.now()
+        const deltaX = touchEndX - touchStartX.current
+        const deltaY = touchEndY - touchStartY.current
+        const deltaTime = touchEndTime - touchStartTime.current
 
-      const deltaX = touchEndX - touchStartX.current
-      const deltaY = touchEndY - touchStartY.current
-      const deltaTime = touchEndTime - touchStartTime.current
+        // Check if it's a quick swipe (under 500ms) and mostly horizontal
+        if (deltaTime < 500 && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+          // Swipe left (next page)
+          if (deltaX < -50 && !rendering) {
+            const target = Math.min(numPages || pageNumber + 1, pageNumber + 1)
+            onPageChange?.(target)
+          }
+          // Swipe right (previous page)
+          else if (deltaX > 50 && !rendering) {
+            const target = Math.max(1, pageNumber - 1)
+            onPageChange?.(target)
+          }
+        }
+      }
 
-      // Reset
+      // Reset touch tracking
       touchStartX.current = null
       touchStartY.current = null
       touchStartTime.current = null
+      pinchStartDistance.current = null
+      isPanning.current = false
+    }
 
-      // Check if it's a quick swipe (under 500ms) and mostly horizontal
-      if (deltaTime > 500) return
-      if (Math.abs(deltaY) > Math.abs(deltaX)) return // Vertical scroll, not a page swipe
-      if (Math.abs(deltaX) < 50) return // Too small to be a swipe
-
-      // Swipe left (next page)
-      if (deltaX < -50 && !rendering) {
-        const target = Math.min(numPages || pageNumber + 1, pageNumber + 1)
-        onPageChange?.(target)
-      }
-      // Swipe right (previous page)
-      else if (deltaX > 50 && !rendering) {
-        const target = Math.max(1, pageNumber - 1)
-        onPageChange?.(target)
+    const handleDoubleTap = (clientX, clientY) => {
+      if (zoomLevel > 1) {
+        // Zoom out to fit
+        setZoomLevel(1)
+        setPanOffset({ x: 0, y: 0 })
+        if (canvasRef.current) {
+          canvasRef.current.style.transform = 'scale(1) translate(0, 0)'
+        }
+      } else {
+        // Zoom in 2x centered on tap point
+        setZoomLevel(2)
+        // Calculate pan to center on tap point
+        const rect = viewport.getBoundingClientRect()
+        const tapX = clientX - rect.left - rect.width / 2
+        const tapY = clientY - rect.top - rect.height / 2
+        setPanOffset({ x: -tapX, y: -tapY })
+        if (canvasRef.current) {
+          canvasRef.current.style.transform = `scale(2) translate(${-tapX / 2}px, ${-tapY / 2}px)`
+        }
       }
     }
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: true })
-    container.addEventListener('touchend', handleTouchEnd, { passive: true })
+    viewport.addEventListener('touchstart', handleTouchStart, { passive: false })
+    viewport.addEventListener('touchmove', handleTouchMove, { passive: false })
+    viewport.addEventListener('touchend', handleTouchEnd, { passive: true })
 
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart)
-      container.removeEventListener('touchend', handleTouchEnd)
+      viewport.removeEventListener('touchstart', handleTouchStart)
+      viewport.removeEventListener('touchmove', handleTouchMove)
+      viewport.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [pageNumber, numPages, rendering, onPageChange])
+  }, [pageNumber, numPages, rendering, onPageChange, zoomLevel, panOffset])
 
   // Re-apply highlights if phrases change
   useEffect(() => {
@@ -165,26 +267,30 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
     try {
       const page = await pdf.getPage(pageNum)
       
-      // Calculate scale based on viewport width
+      // Calculate scale based on viewport width with higher resolution for mobile
       const baseViewport = page.getViewport({ scale: 1.0 })
-      const containerWidth = window.innerWidth * 0.9 // 90vw as in your max-width
-      const containerHeight = window.innerHeight * 0.8 // 80vh as in your max-height
+      const containerWidth = window.innerWidth * 0.9
+      const containerHeight = window.innerHeight * 0.8
       
-      // Calculate scale to fit width or height, whichever is more constraining
       let calculatedScale = Math.min(
         containerWidth / baseViewport.width,
         containerHeight / baseViewport.height
       )
       
-      // On mobile devices (width < 768px), prioritize width fitting
+      // On mobile devices, use higher resolution for better quality
       if (window.innerWidth < 768) {
-        calculatedScale = (window.innerWidth - 40) / baseViewport.width // -40 for padding
+        calculatedScale = (window.innerWidth - 40) / baseViewport.width
+        // Increase resolution for mobile (2x for retina displays)
+        calculatedScale *= window.devicePixelRatio || 2
+      } else {
+        // Desktop also gets better quality
+        calculatedScale *= 1.5
       }
       
       // Ensure minimum scale for readability
-      calculatedScale = Math.max(calculatedScale, 0.5)
+      calculatedScale = Math.max(calculatedScale, 1)
       
-      setScale(calculatedScale)
+      setBaseScale(calculatedScale)
       const viewport = page.getViewport({ scale: calculatedScale })
 
       const canvas = canvasRef.current
@@ -195,10 +301,15 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
       canvas.width = viewport.width
       canvas.height = viewport.height
 
+      // Set canvas display size (CSS) to be smaller than actual resolution
+      const displayScale = window.innerWidth < 768 ? (window.innerWidth - 40) / baseViewport.width : calculatedScale / 1.5
+      canvas.style.width = `${baseViewport.width * displayScale}px`
+      canvas.style.height = `${baseViewport.height * displayScale}px`
+
       const container = containerRef.current
       container.style.position = 'relative'
-      container.style.width = `${viewport.width}px`
-      container.style.height = `${viewport.height}px`
+      container.style.width = `${baseViewport.width * displayScale}px`
+      container.style.height = `${baseViewport.height * displayScale}px`
 
       if (textLayerRef.current) textLayerRef.current.remove()
       container.querySelectorAll('.pdf-highlight-box').forEach((el) => el.remove())
@@ -252,6 +363,12 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
       })
       textLayerDiv.appendChild(frag)
 
+      // Apply current zoom and pan
+      if (canvasRef.current) {
+        canvasRef.current.style.transform = `scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`
+        canvasRef.current.style.transformOrigin = 'center center'
+      }
+
       applyHighlights()
       setLastRenderedPage(pageNum)
     } catch (e) {
@@ -288,19 +405,30 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
 
   // Zoom controls
   function handleZoomIn() {
-    const newScale = Math.min(scale * 1.2, 3)
-    setScale(newScale)
-    if (pdfDoc) renderPage(pdfDoc, pageNumber)
+    const newZoom = Math.min(zoomLevel * 1.5, 4)
+    setZoomLevel(newZoom)
+    if (canvasRef.current) {
+      canvasRef.current.style.transform = `scale(${newZoom}) translate(${panOffset.x / newZoom}px, ${panOffset.y / newZoom}px)`
+    }
   }
 
   function handleZoomOut() {
-    const newScale = Math.max(scale * 0.8, 0.5)
-    setScale(newScale)
-    if (pdfDoc) renderPage(pdfDoc, pageNumber)
+    const newZoom = Math.max(zoomLevel / 1.5, 1)
+    setZoomLevel(newZoom)
+    if (newZoom === 1) {
+      setPanOffset({ x: 0, y: 0 })
+    }
+    if (canvasRef.current) {
+      canvasRef.current.style.transform = `scale(${newZoom}) translate(${panOffset.x / newZoom}px, ${panOffset.y / newZoom}px)`
+    }
   }
 
   function handleFitWidth() {
-    if (pdfDoc) renderPage(pdfDoc, pageNumber)
+    setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
+    if (canvasRef.current) {
+      canvasRef.current.style.transform = 'scale(1) translate(0, 0)'
+    }
   }
 
   return (
@@ -308,7 +436,9 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
       <div className="bg-white rounded-xl shadow-2xl p-3 max-w-[90vw] max-h-[90vh] w-full sm:w-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between mb-2 gap-2">
           <div className="text-sm text-gray-600">
-            Page {pageNumber} {numPages ? `of ${numPages}` : ''} {rendering ? '· Rendering…' : ''}
+            Page {pageNumber} {numPages ? `of ${numPages}` : ''} 
+            {zoomLevel > 1 && ` · ${Math.round(zoomLevel * 100)}%`}
+            {rendering ? ' · Rendering…' : ''}
           </div>
           <div className="flex gap-2 flex-wrap justify-center">
             <button className="px-2 py-1 bg-gray-100 rounded text-sm" onClick={handleZoomOut}>−</button>
@@ -319,16 +449,38 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
             <button className="px-2 py-1 bg-red-500 text-white rounded text-sm" onClick={onClose}>Close</button>
           </div>
         </div>
-        <div className="relative overflow-auto" style={{ maxWidth: '90vw', maxHeight: '80vh' }}>
-          <div ref={containerRef} style={{ position: 'relative', touchAction: 'pan-y pinch-zoom' }}>
-            <canvas ref={canvasRef} style={{ display: 'block', margin: '0 auto' }} />
+        <div 
+          ref={viewportRef}
+          className="relative overflow-auto" 
+          style={{ 
+            maxWidth: '90vw', 
+            maxHeight: '80vh',
+            touchAction: zoomLevel > 1 ? 'none' : 'auto'
+          }}
+        >
+          <div ref={containerRef} style={{ 
+            position: 'relative',
+            margin: '0 auto',
+            transition: 'none'
+          }}>
+            <canvas 
+              ref={canvasRef} 
+              style={{ 
+                display: 'block',
+                margin: '0 auto',
+                transition: 'transform 0.1s ease-out',
+                transformOrigin: 'center center'
+              }} 
+            />
           </div>
-          {/* Swipe hint for mobile */}
-          <div className="sm:hidden absolute bottom-4 left-0 right-0 text-center">
-            <span className="text-xs text-gray-500 bg-white/90 px-2 py-1 rounded">
-              Swipe left/right to change pages
-            </span>
-          </div>
+          {/* Mobile gesture hints */}
+          {zoomLevel === 1 && (
+            <div className="sm:hidden absolute bottom-4 left-0 right-0 text-center pointer-events-none">
+              <div className="inline-block bg-black/70 text-white px-3 py-1 rounded-full text-xs">
+                Swipe to navigate • Double tap to zoom • Pinch to zoom
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
