@@ -78,7 +78,7 @@ export default function SearchPage() {
     }
   }
 
-  // Start voice session
+  // Start voice session - WITH SAMSUNG FIX
   const startVoice = async () => {
     if (isListening) {
       stopVoice()
@@ -88,14 +88,49 @@ export default function SearchPage() {
     try {
       setIsListening(true)
       setVoiceStatus('Getting microphone...')
+      setError(null)
       
-      const localStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
+      // Samsung compatibility: try multiple methods
+      let localStream = null
+      
+      try {
+        // Modern approach
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          localStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: 44100 // Helps on some Android devices
+            }
+          })
         }
-      })
+      } catch (e1) {
+        console.log('Modern getUserMedia failed, trying legacy...')
+        try {
+          // Legacy approach for older Samsung browsers
+          const legacyGetUserMedia = navigator.getUserMedia || 
+                                    navigator.webkitGetUserMedia || 
+                                    navigator.mozGetUserMedia
+          
+          if (legacyGetUserMedia) {
+            localStream = await new Promise((resolve, reject) => {
+              legacyGetUserMedia.call(navigator,
+                { audio: true },
+                resolve,
+                reject
+              )
+            })
+          }
+        } catch (e2) {
+          throw e1 // Throw original error
+        }
+      }
+      
+      if (!localStream) {
+        throw new Error('Could not access microphone')
+      }
+      
       localStreamRef.current = localStream
       
       setVoiceStatus('Connecting...')
@@ -316,8 +351,25 @@ export default function SearchPage() {
       console.log('Voice connection established')
       
     } catch (error) {
-      console.error('Voice error:', error)
-      setError('Voice connection failed')
+      console.error('Voice error details:', error)
+      setIsListening(false)
+      setVoiceStatus('')
+      
+      // Better error messages for Samsung
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setError('Microphone permission denied. Please allow microphone access in your browser settings.')
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        setError('No microphone found. Please connect a microphone and try again.')
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        setError('Microphone is in use by another app. Please close other apps using the microphone.')
+      } else if (error.name === 'OverconstrainedError') {
+        setError('Microphone settings not supported. Try again with default settings.')
+      } else if (error.name === 'TypeError' || error.message.includes('https')) {
+        setError('Microphone requires a secure connection (HTTPS).')
+      } else {
+        setError('Microphone failed: ' + (error.message || 'Unknown error. Try text search instead.'))
+      }
+      
       stopVoice()
     }
   }
