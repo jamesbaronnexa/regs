@@ -81,10 +81,15 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
   useEffect(() => {
     if (!pdfDoc) return
     if (pageNumber === lastRenderedPage && zoomLevel === lastPinchZoom.current) return
-    renderPage(pdfDoc, pageNumber)
-    // Reset zoom and pan when changing pages
+    
+    // Reset zoom and pan BEFORE rendering new page
     setZoomLevel(1)
     setPanOffset({ x: 0, y: 0 })
+    if (canvasRef.current) {
+      canvasRef.current.style.transform = 'scale(1) translate(0, 0)'
+    }
+    
+    renderPage(pdfDoc, pageNumber)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pdfDoc, pageNumber])
 
@@ -269,50 +274,87 @@ export default function PDFViewer({ url, pageNumber, onClose, onPageChange, high
       
       // Calculate scale based on viewport width with higher resolution for mobile
       const baseViewport = page.getViewport({ scale: 1.0 })
-      const containerWidth = window.innerWidth * 0.9
-      const containerHeight = window.innerHeight * 0.8
+      
+      // Use more of the screen space - especially in landscape
+      const padding = window.innerWidth < 768 ? 20 : 40 // Less padding on mobile
+      const containerWidth = window.innerWidth - padding
+      const containerHeight = window.innerHeight - 120 // Account for header/controls
       
       let calculatedScale = Math.min(
         containerWidth / baseViewport.width,
         containerHeight / baseViewport.height
       )
       
-      // On mobile devices, use higher resolution for better quality
-      if (window.innerWidth < 768) {
-        calculatedScale = (window.innerWidth - 40) / baseViewport.width
-        // Increase resolution for mobile (2x for retina displays)
-        calculatedScale *= window.devicePixelRatio || 2
+      // Detect orientation
+      const isLandscape = window.innerWidth > window.innerHeight
+      
+      // On mobile devices, optimize for screen size
+      if (window.innerWidth < 768 || isLandscape) {
+        // In landscape or mobile, prioritize filling the screen
+        if (isLandscape) {
+          // In landscape, use height as constraint but ensure good width usage
+          calculatedScale = containerHeight / baseViewport.height
+          // Check if this makes it too wide
+          if (baseViewport.width * calculatedScale > containerWidth) {
+            calculatedScale = containerWidth / baseViewport.width
+          }
+        } else {
+          // Portrait mode - fit to width
+          calculatedScale = containerWidth / baseViewport.width
+        }
+        
+        // Increase resolution for quality (2x for retina displays)
+        const renderScale = calculatedScale * (window.devicePixelRatio || 2)
+        setBaseScale(renderScale)
+        
+        const viewport = page.getViewport({ scale: renderScale })
+        
+        const canvas = canvasRef.current
+        const ctx = canvas.getContext('2d')
+        // Clear & size canvas
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        
+        // Set canvas display size to fit screen properly
+        canvas.style.width = `${baseViewport.width * calculatedScale}px`
+        canvas.style.height = `${baseViewport.height * calculatedScale}px`
+        
+        const container = containerRef.current
+        container.style.position = 'relative'
+        container.style.width = `${baseViewport.width * calculatedScale}px`
+        container.style.height = `${baseViewport.height * calculatedScale}px`
       } else {
-        // Desktop also gets better quality
+        // Desktop - similar logic but with more padding
         calculatedScale *= 1.5
+        setBaseScale(calculatedScale)
+        
+        const viewport = page.getViewport({ scale: calculatedScale })
+        
+        const canvas = canvasRef.current
+        const ctx = canvas.getContext('2d')
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        
+        const displayScale = calculatedScale / 1.5
+        canvas.style.width = `${baseViewport.width * displayScale}px`
+        canvas.style.height = `${baseViewport.height * displayScale}px`
+        
+        const container = containerRef.current
+        container.style.position = 'relative'
+        container.style.width = `${baseViewport.width * displayScale}px`
+        container.style.height = `${baseViewport.height * displayScale}px`
       }
-      
-      // Ensure minimum scale for readability
-      calculatedScale = Math.max(calculatedScale, 1)
-      
-      setBaseScale(calculatedScale)
-      const viewport = page.getViewport({ scale: calculatedScale })
-
-      const canvas = canvasRef.current
-      const ctx = canvas.getContext('2d')
-      // Clear & size canvas
-      ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      canvas.width = viewport.width
-      canvas.height = viewport.height
-
-      // Set canvas display size (CSS) to be smaller than actual resolution
-      const displayScale = window.innerWidth < 768 ? (window.innerWidth - 40) / baseViewport.width : calculatedScale / 1.5
-      canvas.style.width = `${baseViewport.width * displayScale}px`
-      canvas.style.height = `${baseViewport.height * displayScale}px`
-
-      const container = containerRef.current
-      container.style.position = 'relative'
-      container.style.width = `${baseViewport.width * displayScale}px`
-      container.style.height = `${baseViewport.height * displayScale}px`
 
       if (textLayerRef.current) textLayerRef.current.remove()
       container.querySelectorAll('.pdf-highlight-box').forEach((el) => el.remove())
+
+      // Continue with rendering...
+      const renderScale = baseScale
+      const viewport = page.getViewport({ scale: renderScale })
 
       const textLayerDiv = document.createElement('div')
       textLayerDiv.className = 'textLayer'
