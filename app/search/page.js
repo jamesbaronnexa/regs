@@ -70,6 +70,8 @@ export default function SearchPage() {
   const reconnectAttemptRef = useRef(0)
   const querySequenceRef = useRef(0) // Sequence counter for queries
   const pendingQueriesRef = useRef([]) // Array of {seq, queryId, text}
+  const transcriptionReadyRef = useRef(false) // Track if transcription is complete
+  const pendingResponseIdRef = useRef(null) // Track auto-created responses
 
   useEffect(() => {
     loadDocuments()
@@ -282,7 +284,7 @@ export default function SearchPage() {
               type: 'server_vad',
               threshold: 0.5,
               prefix_padding_ms: 300,
-              silence_duration_ms: 500
+              silence_duration_ms: 700
             },
             instructions: `You are an AI assistant for electricians searching electrical regulations. The electrician will ask technical questions about wiring, circuits, installations, safety requirements, or standards.
 
@@ -357,6 +359,7 @@ Be concise. Help electricians find the exact regulation quickly.`,
         
         if (msg.type === 'conversation.item.input_audio_transcription.completed') {
           if (msg.transcript) {
+            transcriptionReadyRef.current = true
             setQuery(msg.transcript)
             setVoiceStatus('Processing...')
             setConversationState('processing')
@@ -382,6 +385,12 @@ Be concise. Help electricians find the exact regulation quickly.`,
               document_id: selectedDocIdRef.current,
               timestamp: new Date().toISOString()
             })
+            
+            // Now trigger the response after we have the transcription
+            console.log('✅ Transcription ready - creating response')
+            dc.send(JSON.stringify({
+              type: 'response.create'
+            }))
           }
         }
 
@@ -392,6 +401,20 @@ Be concise. Help electricians find the exact regulation quickly.`,
           setConversationState('listening')
           setError(null)
           clearProcessingTimeout()
+          transcriptionReadyRef.current = false
+        }
+
+        if (msg.type === 'input_audio_buffer.speech_stopped') {
+          setVoiceStatus('Processing...')
+        }
+        
+        // If a response is created before transcription is ready, cancel it
+        if (msg.type === 'response.created' && !transcriptionReadyRef.current) {
+          console.log('⚠️ Response created before transcription - cancelling')
+          pendingResponseIdRef.current = msg.response.id
+          dc.send(JSON.stringify({
+            type: 'response.cancel'
+          }))
         }
 
         if (msg.type === 'response.audio.delta' || msg.type === 'response.audio_transcript.delta') {
@@ -609,6 +632,7 @@ Be concise. Help electricians find the exact regulation quickly.`,
     setConversationState('idle')
     reconnectAttemptRef.current = 0
     pendingQueriesRef.current = [] // Clear any pending queries
+    transcriptionReadyRef.current = false // Reset transcription flag
   }
 
   const handleTextQuery = async (text) => {
