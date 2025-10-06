@@ -40,6 +40,7 @@ export default function SearchPage() {
   // Core state
   const [isListening, setIsListening] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
+  const [conversationState, setConversationState] = useState('idle') // idle, listening, processing, speaking, ready
   const [voiceStatus, setVoiceStatus] = useState('')
   const [query, setQuery] = useState('')
   const [error, setError] = useState(null)
@@ -55,6 +56,7 @@ export default function SearchPage() {
   const [selectedDocId, setSelectedDocId] = useState(null)
   const [tocEntries, setTocEntries] = useState([])
   const [pageOffset, setPageOffset] = useState(0)
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false)
   
   // WebRTC refs
   const pcRef = useRef(null)
@@ -64,6 +66,8 @@ export default function SearchPage() {
   const documentsRef = useRef([])
   const selectedDocIdRef = useRef(null)
   const pageOffsetRef = useRef(0)
+  const timeoutRef = useRef(null)
+  const reconnectAttemptRef = useRef(0)
 
   useEffect(() => {
     loadDocuments()
@@ -72,6 +76,8 @@ export default function SearchPage() {
   useEffect(() => {
     if (selectedDocId) {
       selectedDocIdRef.current = selectedDocId
+      setIsLoadingDocument(true)
+      
       const selectedDoc = documents.find(d => d.id === selectedDocId)
       if (selectedDoc) {
         const offset = selectedDoc.pdf_page_offset || 0
@@ -86,6 +92,9 @@ export default function SearchPage() {
             setPdfUrl(url)
             pdfUrlRef.current = url
           }
+          setIsLoadingDocument(false)
+        }).catch(() => {
+          setIsLoadingDocument(false)
         })
       }
     }
@@ -136,6 +145,26 @@ export default function SearchPage() {
     }
   }
 
+  const clearProcessingTimeout = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+  }
+
+  const startProcessingTimeout = () => {
+    clearProcessingTimeout()
+    timeoutRef.current = setTimeout(() => {
+      setVoiceStatus('Taking longer than expected...')
+      setTimeout(() => {
+        if (conversationState !== 'speaking') {
+          setVoiceStatus('Ready - try again')
+          setConversationState('ready')
+        }
+      }, 2000)
+    }, 10000) // 10 second timeout
+  }
+
   const startVoice = async () => {
     if (isListening) {
       stopVoice()
@@ -161,27 +190,31 @@ export default function SearchPage() {
       })
       localStreamRef.current = localStream
 
-      if (pcRef.current && dcRef.current) {
+      if (pcRef.current && dcRef.current && dcRef.current.readyState === 'open') {
         const audioTrack = localStream.getAudioTracks()[0]
         pcRef.current.addTrack(audioTrack, localStream)
         setVoiceStatus('Listening - just speak!')
+        setConversationState('ready')
         return
       }
 
       await startConnection(localStream)
       setVoiceStatus('Listening - just speak!')
+      setConversationState('ready')
 
     } catch (error) {
       console.error('Voice error:', error)
       setError('Microphone access denied or unavailable')
       setIsListening(false)
       setVoiceStatus('')
+      setConversationState('idle')
     }
   }
 
   const startConnection = async (localStream = null) => {
     try {
       setVoiceStatus('Connecting...')
+      setConversationState('idle')
 
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -204,9 +237,23 @@ export default function SearchPage() {
       const dc = pc.createDataChannel('oai-events')
       dcRef.current = dc
 
+      dc.onclose = () => {
+        console.log('Data channel closed')
+        if (isListening && reconnectAttemptRef.current < 3) {
+          reconnectAttemptRef.current++
+          setVoiceStatus(`Connection lost - reconnecting (${reconnectAttemptRef.current}/3)...`)
+          setTimeout(() => startConnection(localStreamRef.current), 1000)
+        } else {
+          setVoiceStatus('Connection lost')
+          setConversationState('idle')
+        }
+      }
+
       dc.onopen = () => {
+        reconnectAttemptRef.current = 0
         setVoiceStatus(localStream ? 'Listening - just speak!' : 'Ready - type or speak!')
         setIsConnected(true)
+        setConversationState('ready')
 
         const sessionConfig = {
           type: 'session.update',
@@ -222,32 +269,45 @@ export default function SearchPage() {
               prefix_padding_ms: 300,
               silence_duration_ms: 500
             },
-            instructions: `Search this table of contents for the best matching clause:
+            instructions: `You are an AI assistant for electricians searching electrical regulations. The electrician will ask technical questions about wiring, circuits, installations, safety requirements, or standards.
+
+Here is the table of contents for this regulation document:
 
 ${tocEntries.map(e => `${e.section_number}: ${e.title} (Page ${e.document_page || e.page})`).join('\n')}
 
-For each question:
-1. Find the most specific matching clause
-2. Include up to 3 alternatives if relevant
-3. Call find_section function
-4. After function returns, say: "Look at Clause [number]"
+When an electrician asks a question:
+1. Understand their technical question (could be about clauses, tables, requirements, or specifications)
+2. Find the BEST matching section - this could be a clause, table, appendix, or requirement
+3. Include up to 3 relevant alternatives ONLY if they would also help answer the question
+4. Call find_section with your findings
+5. After the function returns, respond with ONLY: "Look at [Clause/Table] [number]" - nothing else
 
-If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find that."`,
+Examples:
+- "What's the voltage drop limit?" → Find voltage drop clause/table
+- "Cable sizing for 32A circuit?" → Find cable sizing table
+- "Earthing requirements for bathrooms?" → Find bathroom earthing clause
+- "IP ratings for outdoor installations?" → Find IP rating table/clause
+
+If nothing matches reasonably well:
+- Use section_number "NO_MATCH"
+- Say: "I couldn't find that in this regulation."
+
+Be concise. Don't explain your reasoning. Help electricians find the exact regulation quickly.`,
             tools: [
               {
                 type: 'function',
                 name: 'find_section',
-                description: 'Navigate PDF to specific clause and show alternatives',
+                description: 'Navigate PDF to specific clause, table, or section in electrical regulations',
                 parameters: {
                   type: 'object',
                   properties: {
                     section_number: { 
                       type: 'string',
-                      description: 'Best match clause number from TOC, or "NO_MATCH" if nothing found'
+                      description: 'Best match section number from TOC (could be clause, table, appendix, etc.), or "NO_MATCH" if nothing found'
                     },
                     title: { 
                       type: 'string',
-                      description: 'Best match clause title from TOC, or empty if NO_MATCH'
+                      description: 'Best match title from TOC, or empty if NO_MATCH'
                     },
                     page: { 
                       type: 'number',
@@ -255,7 +315,7 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
                     },
                     alternatives: {
                       type: 'array',
-                      description: 'Up to 3 alternative matches if they exist',
+                      description: 'Up to 3 alternative matches if they would also help answer the question',
                       items: {
                         type: 'object',
                         properties: {
@@ -285,13 +345,37 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
           if (msg.transcript) {
             setQuery(msg.transcript)
             setVoiceStatus('Processing...')
+            setConversationState('processing')
+            startProcessingTimeout()
           }
         }
 
         if (msg.type === 'input_audio_buffer.speech_started') {
           setQuery('')
+          setAlternativeMatches([])
           setVoiceStatus('Listening...')
+          setConversationState('listening')
           setError(null)
+          clearProcessingTimeout()
+        }
+
+        if (msg.type === 'response.audio.delta' || msg.type === 'response.audio_transcript.delta') {
+          setVoiceStatus('🔊 Speaking...')
+          setConversationState('speaking')
+          clearProcessingTimeout()
+        }
+
+        if (msg.type === 'response.audio.done' || msg.type === 'response.content_part.done') {
+          setConversationState('ready')
+          setVoiceStatus('Ready - ask another question!')
+          clearProcessingTimeout()
+          
+          // Clear query after a delay
+          setTimeout(() => {
+            if (conversationState === 'ready') {
+              setQuery('')
+            }
+          }, 3000)
         }
 
         if (msg.type === 'response.function_call_arguments.done' && msg.name === 'find_section') {
@@ -316,16 +400,19 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
                 type: 'response.create',
                 response: {
                   modalities: ['audio', 'text'],
-                  instructions: 'Say: "Sorry, I can\'t find that. Please rephrase your question."'
+                  instructions: 'Say: "I couldn\'t find that in this document. Could you try rephrasing or asking about something else?"'
                 }
               }))
               
-              setVoiceStatus('No match - try rephrasing')
-              setTimeout(() => setVoiceStatus('Ready - ask another question!'), 2000)
+              setVoiceStatus('No match found')
+              setTimeout(() => {
+                setVoiceStatus('Ready - try rephrasing')
+                setConversationState('ready')
+              }, 2000)
               return
             }
             
-            console.log('🔍 Opening clause:', args.section_number, 'at page', args.page)
+            console.log('📍 Opening section:', args.section_number, 'at page', args.page)
             setVoiceStatus('Opening PDF...')
             
             if (!args.page || isNaN(args.page)) {
@@ -377,11 +464,9 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
               type: 'response.create',
               response: {
                 modalities: ['audio', 'text'],
-                instructions: 'Say "Look at Clause" followed by the clause number from the function output. Be brief and clear.'
+                instructions: 'Say "Look at" followed by the section type (Clause, Table, Appendix, etc. based on the section number format) and the section number. Be brief and clear. For example: "Look at Clause 7.4.2" or "Look at Table 4.1"'
               }
             }))
-            
-            // Don't set status yet - wait for audio to finish
             
           } catch (e) {
             console.error('❌ PDF Error:', e)
@@ -398,23 +483,24 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
             }))
             dc.send(JSON.stringify({ type: 'response.create' }))
             
-            setTimeout(() => setVoiceStatus('Ready - try again'), 1500)
+            setTimeout(() => {
+              setVoiceStatus('Ready - try again')
+              setConversationState('ready')
+            }, 1500)
           }
         }
 
         if (msg.type === 'error') {
           console.error('🚨 API Error:', msg.error)
-          setError(`Voice error: ${msg.error?.message || 'Unknown error'}`)
-          setVoiceStatus('Error occurred - try again')
+          setError(`${msg.error?.message || 'Unknown error'}. Tap voice button to retry.`)
+          setVoiceStatus('')
+          clearProcessingTimeout()
+          // Don't auto-disconnect - let them try again
         }
 
         if (msg.type === 'response.done') {
           console.log('✓ Response complete')
-        }
-
-        // Wait for audio to finish before saying "ready"
-        if (msg.type === 'output_audio_buffer.stopped' || msg.type === 'response.content_part.done') {
-          setVoiceStatus('Ready - ask another question!')
+          clearProcessingTimeout()
         }
       }
 
@@ -442,12 +528,14 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
 
     } catch (error) {
       console.error('Connection error:', error)
-      setError('Connection failed')
+      setError('Connection failed. Please try again.')
       stopVoice()
     }
   }
 
   const stopVoice = () => {
+    clearProcessingTimeout()
+    
     if (dcRef.current) {
       dcRef.current.close()
       dcRef.current = null
@@ -466,6 +554,8 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
     setIsListening(false)
     setIsConnected(false)
     setVoiceStatus('')
+    setConversationState('idle')
+    reconnectAttemptRef.current = 0
   }
 
   const handleTextQuery = async (text) => {
@@ -477,6 +567,9 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
     console.log('📝 Sending text query:', text)
     setQuery(text)
     setVoiceStatus('Processing...')
+    setConversationState('processing')
+    setAlternativeMatches([])
+    startProcessingTimeout()
 
     dcRef.current.send(JSON.stringify({
       type: 'conversation.item.create',
@@ -495,7 +588,10 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
     }))
   }
 
-  useEffect(() => () => stopVoice(), [])
+  useEffect(() => () => {
+    stopVoice()
+    clearProcessingTimeout()
+  }, [])
 
   return (
     <div className="relative min-h-dvh bg-neutral-950 text-white flex flex-col items-center p-4">
@@ -513,7 +609,7 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
       <header className="relative z-10 w-full max-w-md mt-6 mb-4">
         <div className="flex items-center gap-3">
           <LogoRounded className="h-8 w-8" />
-          <h1 className="text-base font-semibold tracking-tight">AskRegs</h1>
+          <h1 className="text-base font-semibold tracking-tight">Regs</h1>
         </div>
       </header>
 
@@ -521,13 +617,15 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
         <div className="mb-6">
           <select
             value={selectedDocId || ''}
-            onChange={(e) => {
+            onChange={async (e) => {
               const newId = Number(e.target.value)
               setSelectedDocId(newId)
               selectedDocIdRef.current = newId
+              setVoiceStatus('Loading document...')
             }}
             className="w-full rounded-xl bg-white/10 px-4 py-2 outline-none text-white"
             style={{ background: 'rgba(255,255,255,0.1)' }}
+            disabled={isLoadingDocument}
           >
             <option value="" disabled>Select a document</option>
             {documents.map(doc => (
@@ -538,9 +636,13 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
           </select>
           {selectedDocId && (
             <div className="mt-2 text-xs text-white/60">
-              {tocEntries.length > 0 
-                ? `📚 ${tocEntries.length} sections loaded` 
-                : 'Loading table of contents...'}
+              {isLoadingDocument ? (
+                '⏳ Loading document...'
+              ) : tocEntries.length > 0 ? (
+                `📚 ${tocEntries.length} sections loaded`
+              ) : (
+                'Loading table of contents...'
+              )}
             </div>
           )}
         </div>
@@ -551,7 +653,7 @@ If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find t
               className={`relative h-16 w-16 rounded-xl ring-2 backdrop-blur active:scale-95 transition flex-shrink-0
                 ${isListening ? 'ring-yellow-400 bg-yellow-400/10' : 'ring-yellow-400/70 bg-white/10 hover:bg-white/15'}`}
               onClick={startVoice}
-              disabled={!selectedDocId || tocEntries.length === 0}
+              disabled={!selectedDocId || tocEntries.length === 0 || isLoadingDocument}
               aria-label="Tap to talk"
             >
               <div className="flex items-center justify-center h-full relative">
