@@ -293,21 +293,20 @@ ${tocEntries.map(e => `${e.section_number}: ${e.title} (Page ${e.document_page |
 When an electrician asks a question:
 1. Understand their technical question (could be about clauses, tables, requirements, or specifications)
 2. Find the BEST matching section - this could be a clause, table, appendix, or requirement
-3. Include up to 3 relevant alternatives ONLY if they would also help answer the question
-4. Call find_section with your findings
+3. ALWAYS check for related alternatives - include up to 3 other sections that are also relevant to the question
+4. Call find_section with your best match AND alternatives array
 5. After the function returns, respond with ONLY: "Look at [Clause/Table] [number]" - nothing else
 
-Examples:
-- "What's the voltage drop limit?" → Find voltage drop clause/table
-- "Cable sizing for 32A circuit?" → Find cable sizing table
-- "Earthing requirements for bathrooms?" → Find bathroom earthing clause
-- "IP ratings for outdoor installations?" → Find IP rating table/clause
+Examples of when to include alternatives:
+- Question about "cable sizing" → Main: cable sizing table, Alternatives: derating factors, voltage drop
+- Question about "bathroom zones" → Main: bathroom requirements, Alternatives: IP ratings, earthing requirements
+- Question about general topic → Always include 2-3 related sections
 
 If nothing matches reasonably well:
 - Use section_number "NO_MATCH"
 - Say: "I couldn't find that in this regulation."
 
-Be concise. Don't explain your reasoning. Help electricians find the exact regulation quickly.`,
+Be concise. Help electricians find the exact regulation quickly.`,
             tools: [
               {
                 type: 'function',
