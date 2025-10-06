@@ -517,7 +517,7 @@ Be concise. Don't explain your reasoning. Help electricians find the exact regul
               type: 'response.create',
               response: {
                 modalities: ['audio', 'text'],
-                instructions: 'Say "Look at" followed by the section type (Clause, Table, Appendix, etc. based on the section number format) and the section number. Be brief and clear. For example: "Look at Clause 7.4.2" or "Look at Table 4.1"'
+                instructions: 'Say only: "Look at Clause" then the number. Nothing else.'
               }
             }))
             
