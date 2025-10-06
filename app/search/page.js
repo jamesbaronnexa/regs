@@ -2,93 +2,156 @@
 
 import { useState, useEffect, useRef } from 'react'
 import PDFViewer from '../../components/PDFViewer'
-import { AS_NZS_3000_TOC } from '../lib/hardcoded-toc'
+
+// --- Icon components ---
+const BoltIcon = ({ className = '', color = 'currentColor' }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+    <path d="M13 3L4 14h6l-1 7 9-11h-6l1-7z" fill={color} />
+  </svg>
+)
+
+const LogoRounded = ({ className = '', corner = 6 }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+    <rect x="0" y="0" width="24" height="24" rx={corner} fill="#FACC15" />
+    <path d="M13 3L4 14h6l-1 7 9-11h-6l1-7z" fill="#0B0F19" />
+  </svg>
+)
+
+const AudioBars = ({ active = false }) => {
+  if (!active) return null
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div className="bars">
+        <span style={{ animationDelay: '0ms' }} />
+        <span style={{ animationDelay: '120ms' }} />
+        <span style={{ animationDelay: '240ms' }} />
+        <span style={{ animationDelay: '360ms' }} />
+      </div>
+      <style jsx>{`
+        .bars { display: grid; grid-auto-flow: column; gap: 6px; align-items: end; height: 28px; }
+        .bars span { width: 4px; background: #FACC15; height: 10px; border-radius: 2px; animation: eq-bounce 900ms ease-in-out infinite; }
+        @keyframes eq-bounce { 0%, 100% { height: 8px; opacity: .85; } 50% { height: 24px; opacity: 1; } }
+      `}</style>
+    </div>
+  )
+}
 
 export default function SearchPage() {
-  const [query, setQuery] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState(null)
+  // Core state
   const [isListening, setIsListening] = useState(false)
+  const [isConnected, setIsConnected] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState('')
-
-  // viewer state
+  const [query, setQuery] = useState('')
+  const [error, setError] = useState(null)
+  
+  // PDF state
   const [showViewer, setShowViewer] = useState(false)
   const [pageNumber, setPageNumber] = useState(1)
-  const [highlightPhrases, setHighlightPhrases] = useState([])
-
   const [pdfUrl, setPdfUrl] = useState(null)
+  const [alternativeMatches, setAlternativeMatches] = useState([])
+  
+  // Document state
+  const [documents, setDocuments] = useState([])
+  const [selectedDocId, setSelectedDocId] = useState(null)
+  const [tocEntries, setTocEntries] = useState([])
   const [pageOffset, setPageOffset] = useState(0)
-
-  // WebRTC refs for voice
+  
+  // WebRTC refs
   const pcRef = useRef(null)
   const dcRef = useRef(null)
   const localStreamRef = useRef(null)
+  const pdfUrlRef = useRef(null)
+  const documentsRef = useRef([])
+  const selectedDocIdRef = useRef(null)
+  const pageOffsetRef = useRef(0)
 
-  // Load latest uploaded PDF from Supabase
   useEffect(() => {
-    async function fetchLatestPdf() {
-      try {
-        const res = await fetch('/api/pdfs/latest')
-        if (!res.ok) throw new Error('No PDF found')
-        const data = await res.json()
-        setPdfUrl(data.url)
-        const offset = parseInt(data.pageOffset) || 0
-        setPageOffset(offset)
-      } catch (e) {
-        console.error('No PDF loaded', e)
-        setPdfUrl(null)
-        setPageOffset(0)
-      }
-    }
-    fetchLatestPdf()
+    loadDocuments()
   }, [])
 
-  const openPdfAt = ({ page, highlights = [] }) => {
-    const actualPage = parseInt(page) + parseInt(pageOffset)
-    setPageNumber(actualPage)
-    setHighlightPhrases(highlights)
-    setShowViewer(true)
+  useEffect(() => {
+    if (selectedDocId) {
+      selectedDocIdRef.current = selectedDocId
+      const selectedDoc = documents.find(d => d.id === selectedDocId)
+      if (selectedDoc) {
+        const offset = selectedDoc.pdf_page_offset || 0
+        setPageOffset(offset)
+        pageOffsetRef.current = offset
+        
+        Promise.all([
+          loadPdfUrl(selectedDoc.filename),
+          loadTocForDocument(selectedDocId)
+        ]).then(([url]) => {
+          if (url) {
+            setPdfUrl(url)
+            pdfUrlRef.current = url
+          }
+        })
+      }
+    }
+  }, [selectedDocId, documents])
+
+  const loadDocuments = async () => {
+    try {
+      const response = await fetch('/api/get-documents')
+      const data = await response.json()
+      
+      if (data.error) throw new Error(data.error)
+      
+      setDocuments(data.documents || [])
+      documentsRef.current = data.documents || []
+      
+      if (data.documents?.length > 0 && !selectedDocId) {
+        setSelectedDocId(data.documents[0].id)
+        selectedDocIdRef.current = data.documents[0].id
+      }
+    } catch (error) {
+      console.error('Error loading documents:', error)
+      setError(`Failed to load documents: ${error.message}`)
+    }
   }
 
-  // Handle search results from Realtime API
-  const handleSearchResult = (sections) => {
-    if (!sections || sections.length === 0) {
-      setResult({ selection: null, alternatives: [] })
-      return
-    }
-
-    const results = sections.map((section, idx) => ({
-      id: section.section,
-      title: section.title,
-      page: section.page,
-      score: idx === 0 ? 1.0 : 0.8 - (idx * 0.1)
-    }))
-
-    const resultData = {
-      selection: results[0],
-      alternatives: results.slice(1),
-      autoOpen: true,
-      meta: { top: results[0]?.score || 0 }
-    }
-
-    setResult(resultData)
-    if (resultData.selection && resultData.autoOpen) {
-      openPdfAt({ page: resultData.selection.page, highlights: [query] })
+  const loadPdfUrl = async (filename) => {
+    try {
+      const response = await fetch(`/api/get-pdf-signed-url?filename=${filename}`)
+      const data = await response.json()
+      return data.url
+    } catch (error) {
+      console.error('Error getting PDF URL:', error)
+      return null
     }
   }
 
-  // Start voice session
+  const loadTocForDocument = async (docId) => {
+    try {
+      const response = await fetch(`/api/get-toc?documentId=${docId}`)
+      const data = await response.json()
+      
+      if (data.error) throw new Error(data.error)
+      
+      setTocEntries(data.toc || [])
+    } catch (error) {
+      console.error('Error loading TOC:', error)
+      setError(`Failed to load table of contents: ${error.message}`)
+    }
+  }
+
   const startVoice = async () => {
     if (isListening) {
       stopVoice()
       return
     }
 
+    if (!selectedDocId || tocEntries.length === 0) {
+      setError('Please wait for the document to load')
+      return
+    }
+
     try {
       setIsListening(true)
       setVoiceStatus('Getting microphone...')
-      
+      setError(null)
+
       const localStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -97,200 +160,267 @@ export default function SearchPage() {
         }
       })
       localStreamRef.current = localStream
-      
+
+      if (pcRef.current && dcRef.current) {
+        const audioTrack = localStream.getAudioTracks()[0]
+        pcRef.current.addTrack(audioTrack, localStream)
+        setVoiceStatus('Listening - just speak!')
+        return
+      }
+
+      await startConnection(localStream)
+      setVoiceStatus('Listening - just speak!')
+
+    } catch (error) {
+      console.error('Voice error:', error)
+      setError('Microphone access denied or unavailable')
+      setIsListening(false)
+      setVoiceStatus('')
+    }
+  }
+
+  const startConnection = async (localStream = null) => {
+    try {
       setVoiceStatus('Connecting...')
-      
+
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
       })
       pcRef.current = pc
-      
-      const audioTrack = localStream.getAudioTracks()[0]
-      pc.addTrack(audioTrack, localStream)
-      
-      // Handle audio response from AI (silent mode)
-      pc.ontrack = (event) => {
-        // We receive audio but don't play it (silent assistant)
-        console.log('Received audio track (muted)')
+
+      if (localStream) {
+        const audioTrack = localStream.getAudioTracks()[0]
+        pc.addTrack(audioTrack, localStream)
       }
-      
+
+      pc.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+          const audio = new Audio()
+          audio.srcObject = event.streams[0]
+          audio.autoplay = true
+        }
+      }
+
       const dc = pc.createDataChannel('oai-events')
       dcRef.current = dc
-      
+
       dc.onopen = () => {
-        console.log('Data channel opened')
-        setVoiceStatus('Listening - just speak!')
-        
-        // Configure the session with your TOC
+        setVoiceStatus(localStream ? 'Listening - just speak!' : 'Ready - type or speak!')
+        setIsConnected(true)
+
         const sessionConfig = {
-          type: "session.update",
+          type: 'session.update',
           session: {
-            modalities: ["audio", "text"],
-            voice: "alloy",
+            modalities: ['audio', 'text'],
+            voice: 'alloy',
             input_audio_transcription: {
-              model: "whisper-1"
+              model: 'whisper-1'
             },
             turn_detection: {
-              type: "server_vad",
+              type: 'server_vad',
               threshold: 0.5,
               prefix_padding_ms: 300,
               silence_duration_ms: 500
             },
-            instructions: `You are a silent search assistant for electricians using AS/NZS 3000:2018.
-            
-            CRITICAL: You NEVER speak responses aloud. You only return function calls.
-            
-            When users ask questions:
-            1. Search the TOC for matching sections
-            2. Use the search_sections function to return results
-            3. DO NOT generate any audio response
-            
-            Understand electrician terminology:
-            - "switchie" or "board" = switchboard
-            - "RCD" or "safety switch" = residual current device  
-            - "EFLI" = earth fault loop impedance
-            - "max demand" = maximum demand
-            - Common phrases like "where do I put" = location requirements
-            
-            Handle navigation commands:
-            - "next page" or "forward" = use navigate_page with direction: "next"
-            - "previous" or "back" = use navigate_page with direction: "prev"
-            - "page 317" = use navigate_page with page: 317
-            
-            Here is the table of contents:
-            ${AS_NZS_3000_TOC.map(e => `${e.section}: ${e.title} (Page ${e.page})`).join('\n')}`,
-            
+            instructions: `Search this table of contents for the best matching clause:
+
+${tocEntries.map(e => `${e.section_number}: ${e.title} (Page ${e.document_page || e.page})`).join('\n')}
+
+For each question:
+1. Find the most specific matching clause
+2. Include up to 3 alternatives if relevant
+3. Call find_section function
+4. After function returns, say: "Look at Clause [number]"
+
+If nothing matches, use section_number "NO_MATCH" and say "Sorry, I can't find that."`,
             tools: [
               {
-                type: "function",
-                name: "search_sections",
-                description: "Return matching sections from the TOC",
+                type: 'function',
+                name: 'find_section',
+                description: 'Navigate PDF to specific clause and show alternatives',
                 parameters: {
-                  type: "object",
+                  type: 'object',
                   properties: {
-                    sections: {
-                      type: "array",
+                    section_number: { 
+                      type: 'string',
+                      description: 'Best match clause number from TOC, or "NO_MATCH" if nothing found'
+                    },
+                    title: { 
+                      type: 'string',
+                      description: 'Best match clause title from TOC, or empty if NO_MATCH'
+                    },
+                    page: { 
+                      type: 'number',
+                      description: 'Best match page number from TOC, or 0 if NO_MATCH'
+                    },
+                    alternatives: {
+                      type: 'array',
+                      description: 'Up to 3 alternative matches if they exist',
                       items: {
-                        type: "object",
+                        type: 'object',
                         properties: {
-                          section: { type: "string" },
-                          title: { type: "string" },
-                          page: { type: "number" }
+                          section_number: { type: 'string' },
+                          title: { type: 'string' },
+                          page: { type: 'number' }
                         }
-                      },
-                      description: "Array of matching sections (max 6)"
+                      }
                     }
                   },
-                  required: ["sections"]
-                }
-              },
-              {
-                type: "function",
-                name: "navigate_page",
-                description: "Navigate the PDF viewer",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    direction: {
-                      type: "string",
-                      enum: ["next", "prev"],
-                      description: "Navigation direction"
-                    },
-                    page: {
-                      type: "number",
-                      description: "Specific page number to go to"
-                    }
-                  }
+                  required: ['section_number', 'title', 'page']
                 }
               }
             ]
           }
         }
-        
+
         dc.send(JSON.stringify(sessionConfig))
       }
-      
-      dc.onmessage = (event) => {
+
+      dc.onmessage = async (event) => {
         const msg = JSON.parse(event.data)
-        console.log('Realtime message:', msg.type) // Debug log
         
-        // Handle audio transcription events
-        if (msg.type === 'input_audio_buffer.speech_started') {
-          setQuery('') // Clear when new speech starts
-          setVoiceStatus('Listening...')
-        }
+        console.log('📨 Received:', msg.type, msg)
         
-        if (msg.type === 'input_audio_buffer.speech_stopped') {
-          setVoiceStatus('Processing...')
-        }
-        
-        // Handle partial transcription updates (real-time text as you speak)
-        if (msg.type === 'conversation.item.input_audio_transcription.delta') {
-          if (msg.delta) {
-            setQuery(prev => prev + msg.delta)
-          }
-        }
-        
-        // Handle completed transcription
         if (msg.type === 'conversation.item.input_audio_transcription.completed') {
           if (msg.transcript) {
             setQuery(msg.transcript)
-            setVoiceStatus('Searching...')
+            setVoiceStatus('Processing...')
           }
         }
-        
-        // Handle function calls
-        if (msg.type === 'response.function_call_arguments.done') {
-          if (msg.name === 'search_sections') {
-            try {
-              const args = JSON.parse(msg.arguments)
-              handleSearchResult(args.sections)
-              setVoiceStatus('Listening')
+
+        if (msg.type === 'input_audio_buffer.speech_started') {
+          setQuery('')
+          setVoiceStatus('Listening...')
+          setError(null)
+        }
+
+        if (msg.type === 'response.function_call_arguments.done' && msg.name === 'find_section') {
+          try {
+            const args = JSON.parse(msg.arguments)
+            console.log('🔍 Function called with:', args)
+            
+            if (args.section_number === 'NO_MATCH') {
+              console.log('❌ No match found')
+              setAlternativeMatches([])
               
-              // Send silent acknowledgment
               dc.send(JSON.stringify({
                 type: 'conversation.item.create',
                 item: {
                   type: 'function_call_output',
                   call_id: msg.call_id,
-                  output: 'done'
+                  output: 'NO_MATCH'
                 }
               }))
-            } catch (e) {
-              console.error('Error parsing search results:', e)
-            }
-          } else if (msg.name === 'navigate_page') {
-            try {
-              const args = JSON.parse(msg.arguments)
               
-              if (args.direction === 'next') {
-                setPageNumber(prev => prev + 1)
-              } else if (args.direction === 'prev') {
-                setPageNumber(prev => Math.max(1, prev - 1))
-              } else if (args.page) {
-                openPdfAt({ page: args.page, highlights: [] })
+              dc.send(JSON.stringify({ 
+                type: 'response.create',
+                response: {
+                  modalities: ['audio', 'text'],
+                  instructions: 'Say: "Sorry, I can\'t find that. Please rephrase your question."'
+                }
+              }))
+              
+              setVoiceStatus('No match - try rephrasing')
+              setTimeout(() => setVoiceStatus('Ready - ask another question!'), 2000)
+              return
+            }
+            
+            console.log('🔍 Opening clause:', args.section_number, 'at page', args.page)
+            setVoiceStatus('Opening PDF...')
+            
+            if (!args.page || isNaN(args.page)) {
+              throw new Error('Invalid page number')
+            }
+            
+            if (args.alternatives && args.alternatives.length > 0) {
+              console.log('📚 Found', args.alternatives.length, 'alternative matches')
+              setAlternativeMatches(args.alternatives)
+            } else {
+              setAlternativeMatches([])
+            }
+            
+            if (!pdfUrlRef.current) {
+              const selectedDoc = documentsRef.current.find(d => d.id === selectedDocIdRef.current)
+              if (selectedDoc) {
+                const url = await loadPdfUrl(selectedDoc.filename)
+                if (url) {
+                  setPdfUrl(url)
+                  pdfUrlRef.current = url
+                } else {
+                  throw new Error('Failed to load PDF')
+                }
               }
-              
-              dc.send(JSON.stringify({
-                type: 'conversation.item.create',
-                item: {
-                  type: 'function_call_output',
-                  call_id: msg.call_id,
-                  output: 'done'
-                }
-              }))
-            } catch (e) {
-              console.error('Error navigating:', e)
             }
+            
+            const actualPage = parseInt(args.page) + (pageOffsetRef.current || 0)
+            console.log(`📄 Navigation: Doc page ${args.page} + offset ${pageOffsetRef.current} = PDF page ${actualPage}`)
+            
+            setPageNumber(actualPage)
+            if (!showViewer) {
+              setShowViewer(true)
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 300))
+            
+            console.log('✅ PDF opened successfully')
+            
+            dc.send(JSON.stringify({
+              type: 'conversation.item.create',
+              item: {
+                type: 'function_call_output',
+                call_id: msg.call_id,
+                output: args.section_number
+              }
+            }))
+            
+            dc.send(JSON.stringify({ 
+              type: 'response.create',
+              response: {
+                modalities: ['audio', 'text'],
+                instructions: 'Say "Look at Clause" followed by the clause number from the function output. Be brief and clear.'
+              }
+            }))
+            
+            // Don't set status yet - wait for audio to finish
+            
+          } catch (e) {
+            console.error('❌ PDF Error:', e)
+            setError(`Failed to open PDF: ${e.message}`)
+            setAlternativeMatches([])
+            
+            dc.send(JSON.stringify({
+              type: 'conversation.item.create',
+              item: {
+                type: 'function_call_output',
+                call_id: msg.call_id,
+                output: 'ERROR: Could not open PDF. Please try again.'
+              }
+            }))
+            dc.send(JSON.stringify({ type: 'response.create' }))
+            
+            setTimeout(() => setVoiceStatus('Ready - try again'), 1500)
           }
+        }
+
+        if (msg.type === 'error') {
+          console.error('🚨 API Error:', msg.error)
+          setError(`Voice error: ${msg.error?.message || 'Unknown error'}`)
+          setVoiceStatus('Error occurred - try again')
+        }
+
+        if (msg.type === 'response.done') {
+          console.log('✓ Response complete')
+        }
+
+        // Wait for audio to finish before saying "ready"
+        if (msg.type === 'output_audio_buffer.stopped' || msg.type === 'response.content_part.done') {
+          setVoiceStatus('Ready - ask another question!')
         }
       }
-      
-      // Create offer
+
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
-      
-      // Wait for ICE gathering
+
       await new Promise((resolve) => {
         if (pc.iceGatheringState === 'complete') resolve()
         pc.onicegatheringstatechange = () => {
@@ -298,26 +428,21 @@ export default function SearchPage() {
         }
         setTimeout(resolve, 2000)
       })
-      
-      // Send to API
+
       const response = await fetch('/api/realtime-regs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sdp: pc.localDescription.sdp })
       })
-      
-      if (!response.ok) {
-        throw new Error('Failed to connect to Realtime API')
-      }
-      
+
+      if (!response.ok) throw new Error('Failed to connect')
+
       const { sdp: answer } = await response.json()
       await pc.setRemoteDescription({ type: 'answer', sdp: answer })
-      
-      console.log('Voice connection established')
-      
+
     } catch (error) {
-      console.error('Voice error:', error)
-      setError('Voice connection failed')
+      console.error('Connection error:', error)
+      setError('Connection failed')
       stopVoice()
     }
   }
@@ -327,165 +452,164 @@ export default function SearchPage() {
       dcRef.current.close()
       dcRef.current = null
     }
-    
+
     if (pcRef.current) {
       pcRef.current.close()
       pcRef.current = null
     }
-    
+
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop())
       localStreamRef.current = null
     }
-    
+
     setIsListening(false)
+    setIsConnected(false)
     setVoiceStatus('')
   }
 
-  // Handle text search through Realtime data channel
-  const runSearch = async () => {
-    if (!query.trim()) return
-    
-    setLoading(true)
-    setError(null)
-    
-    // If voice is active, send through data channel
-    if (dcRef.current && dcRef.current.readyState === 'open') {
-      dcRef.current.send(JSON.stringify({
-        type: 'conversation.item.create',
-        item: {
-          type: 'message',
-          role: 'user',
-          content: [{
-            type: 'input_text',
-            text: query
-          }]
-        }
-      }))
-      
-      // Trigger response
-      dcRef.current.send(JSON.stringify({ type: 'response.create' }))
-      setLoading(false)
-    } else {
-      // Fallback to simple search if voice not active
-      try {
-        const res = await fetch('/api/search-toc', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query })
-        })
-        if (!res.ok) throw new Error('Search failed')
-        const data = await res.json()
-        setResult(data)
-        if (data.selection && data.autoOpen) {
-          openPdfAt({ page: data.selection.page, highlights: [query] })
-        }
-      } catch (e) {
-        console.error(e)
-        setError('Search failed. Try enabling voice mode.')
-      } finally {
-        setLoading(false)
-      }
+  const handleTextQuery = async (text) => {
+    if (!dcRef.current || dcRef.current.readyState !== 'open') {
+      setError('Connection not ready. Please tap the voice button first.')
+      return
     }
+
+    console.log('📝 Sending text query:', text)
+    setQuery(text)
+    setVoiceStatus('Processing...')
+
+    dcRef.current.send(JSON.stringify({
+      type: 'conversation.item.create',
+      item: {
+        type: 'message',
+        role: 'user',
+        content: [{
+          type: 'input_text',
+          text: text
+        }]
+      }
+    }))
+
+    dcRef.current.send(JSON.stringify({
+      type: 'response.create'
+    }))
   }
 
-  const onAltClick = (alt) => openPdfAt({ page: alt.page, highlights: [query] })
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopVoice()
-    }
-  }, [])
+  useEffect(() => () => stopVoice(), [])
 
   return (
-    <div className="min-h-dvh bg-neutral-950 text-white flex flex-col items-center p-4">
-      <div className="w-full max-w-md mt-12">
-        {/* Center mic/icon button */}
-        <button
-          className={`mx-auto block h-20 w-20 rounded-full backdrop-blur active:scale-95 transition ${
-            isListening 
-              ? 'bg-red-500/20 hover:bg-red-500/30 animate-pulse' 
-              : 'bg-white/10 hover:bg-white/15'
-          }`}
-          onClick={isListening ? stopVoice : startVoice}
-          disabled={!pdfUrl}
-          aria-label="Voice Search"
-        >
-          <span className="text-3xl">{isListening ? '🔴' : '🎤'}</span>
-        </button>
+    <div className="relative min-h-dvh bg-neutral-950 text-white flex flex-col items-center p-4">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 opacity-20"
+        style={{
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 24px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 24px)
+          `
+        }}
+      />
 
-        {voiceStatus && (
-          <div className="mt-2 text-xs text-white/60 text-center">{voiceStatus}</div>
-        )}
+      <header className="relative z-10 w-full max-w-md mt-6 mb-4">
+        <div className="flex items-center gap-3">
+          <LogoRounded className="h-8 w-8" />
+          <h1 className="text-base font-semibold tracking-tight">AskRegs</h1>
+        </div>
+      </header>
 
-        {!pdfUrl && (
-          <div className="mt-4 text-sm text-white/60 text-center">Upload a PDF first to start searching.</div>
-        )}
-
-        {/* Text input for typed queries */}
-        <div className="mt-6">
-          <input
-            className="w-full rounded-xl bg-white/10 px-4 py-3 outline-none placeholder-white/40"
-            placeholder={isListening ? "Listening... or type here" : "Ask anything about the regs…"}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && runSearch()}
-            disabled={!pdfUrl}
-          />
+      <div className="relative z-10 w-full max-w-md">
+        <div className="mb-6">
+          <select
+            value={selectedDocId || ''}
+            onChange={(e) => {
+              const newId = Number(e.target.value)
+              setSelectedDocId(newId)
+              selectedDocIdRef.current = newId
+            }}
+            className="w-full rounded-xl bg-white/10 px-4 py-2 outline-none text-white"
+            style={{ background: 'rgba(255,255,255,0.1)' }}
+          >
+            <option value="" disabled>Select a document</option>
+            {documents.map(doc => (
+              <option key={doc.id} value={doc.id} style={{ background: '#0B0F19' }}>
+                {doc.title || doc.filename}
+              </option>
+            ))}
+          </select>
+          {selectedDocId && (
+            <div className="mt-2 text-xs text-white/60">
+              {tocEntries.length > 0 
+                ? `📚 ${tocEntries.length} sections loaded` 
+                : 'Loading table of contents...'}
+            </div>
+          )}
         </div>
 
-        {loading && <div className="mt-6 text-center text-white/60">Thinking…</div>}
-
-        {error && <div className="mt-6 text-sm text-red-300">{error}</div>}
-
-        {result && (
-          <div className="mt-8 space-y-4">
-            {result.selection && (
-              <div className="rounded-xl border border-white/10 p-4 bg-white/5">
-                <div className="text-sm text-white/70">Top match</div>
-                <div className="mt-1 font-medium">{result.selection.id} — {result.selection.title}</div>
-                <div className="text-white/70 text-sm">Page {result.selection.page} • score {result.meta?.top?.toFixed?.(2)}</div>
-                {result.autoOpen ? (
-                  <div className="mt-2 text-xs text-white/60">Opened in viewer automatically.</div>
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <button
+              className={`relative h-16 w-16 rounded-xl ring-2 backdrop-blur active:scale-95 transition flex-shrink-0
+                ${isListening ? 'ring-yellow-400 bg-yellow-400/10' : 'ring-yellow-400/70 bg-white/10 hover:bg-white/15'}`}
+              onClick={startVoice}
+              disabled={!selectedDocId || tocEntries.length === 0}
+              aria-label="Tap to talk"
+            >
+              <div className="flex items-center justify-center h-full relative">
+                {isListening ? (
+                  <AudioBars active />
                 ) : (
-                  <div className="mt-3">
-                    <button onClick={() => onAltClick(result.selection)} className="text-sm underline">Open page</button>
-                  </div>
+                  <BoltIcon className="h-7 w-7" color="#FACC15" />
                 )}
               </div>
-            )}
+            </button>
 
-            {result.alternatives?.length > 0 && (
-              <div className="rounded-xl border border-white/10 p-4 bg-white/5">
-                <div className="text-sm text-white/70">Other likely sections</div>
-                <div className="mt-3 grid grid-cols-1 gap-2">
-                  {result.alternatives.map((a, i) => (
-                    <button key={i}
-                      onClick={() => onAltClick(a)}
-                      className="text-left rounded-lg bg-white/10 hover:bg-white/15 px-3 py-2"
+            {isConnected ? (
+              <div className="flex-1">
+                {query ? (
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                    <div className="text-xs text-white/60 mb-1">You asked:</div>
+                    <div className="text-sm">{query}</div>
+                  </div>
+                ) : (
+                  <form onSubmit={(e) => {
+                    e.preventDefault()
+                    const input = e.target.querySelector('input')
+                    if (input.value.trim()) {
+                      handleTextQuery(input.value.trim())
+                      input.value = ''
+                    }
+                  }} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Type your question or use voice..."
+                      className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder-white/40 outline-none focus:border-yellow-400/50"
+                    />
+                    <button
+                      type="submit"
+                      className="px-5 py-3 bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-xl text-yellow-400 text-sm font-medium transition"
                     >
-                      <div className="font-medium">{a.id} — {a.title}</div>
-                      <div className="text-white/60 text-sm">Page {a.page} • score {a.score.toFixed(2)}</div>
+                      Ask
                     </button>
-                  ))}
+                  </form>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1">
+                <div className="text-sm text-white/60">
+                  Tap the voice button to start
                 </div>
               </div>
             )}
+          </div>
 
-            {result.rephrases?.length > 0 && (
-              <div className="rounded-xl border border-white/10 p-4 bg-white/5">
-                <div className="text-sm text-white/70">Try asking:</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {result.rephrases.slice(0,3).map((r, i) => (
-                    <button key={i}
-                      onClick={() => { setQuery(r); runSearch() }}
-                      className="rounded-full bg-white/10 hover:bg-white/15 px-3 py-1 text-sm"
-                    >{r}</button>
-                  ))}
-                </div>
-              </div>
-            )}
+          {voiceStatus && (
+            <div className="text-xs text-white/60 text-center">{voiceStatus}</div>
+          )}
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+            <div className="text-sm text-red-400">{error}</div>
           </div>
         )}
       </div>
@@ -494,9 +618,22 @@ export default function SearchPage() {
         <PDFViewer
           url={pdfUrl}
           pageNumber={pageNumber}
-          onClose={() => setShowViewer(false)}
+          onClose={() => {
+            setShowViewer(false)
+            setAlternativeMatches([])
+          }}
           onPageChange={setPageNumber}
-          highlightPhrases={highlightPhrases}
+          alternativeMatches={alternativeMatches}
+          onAlternativeClick={(alt) => {
+            const altPage = parseInt(alt.page) + (pageOffsetRef.current || 0)
+            console.log(`📄 Navigating to alternative: ${alt.section_number} at page ${altPage}`)
+            setPageNumber(altPage)
+          }}
+          isListening={isListening}
+          voiceStatus={voiceStatus}
+          query={query}
+          onVoiceClick={startVoice}
+          onTextQuery={handleTextQuery}
         />
       )}
     </div>

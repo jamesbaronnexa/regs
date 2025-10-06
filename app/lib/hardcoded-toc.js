@@ -523,8 +523,6 @@ export const AS_NZS_3000_TOC = [
   { section: "D4.2.1", title: "Determine the minimum length of pole/post", page: 495, level: 4 },
   { section: "D4.2.2", title: "Select the minimum pole/post strength and size", page: 496, level: 4 },
   // All the D tables with proper keywords
-  { section: "Table D1", title: "SINKING OF POSTS/POLES IN GROUND", page: 498, level: 3, keywords: "pole depth, poor soil, medium soil, good soil" },
-  { section: "Table D2", title: "FORCE EXERTED BY AERIAL LINE CONDUCTORS", page: 499, level: 3, keywords: "aerial tension, conductor weight, sag, span" },
   { section: "Table D1", title: "SINKING OF POSTS/POLES IN GROUND", page: 498, level: 3, keywords: "pole depth, post depth, poor soil, medium soil, good soil, free length, conductor support", parent_section: "D" },
   { section: "Table D2", title: "FORCE EXERTED BY AERIAL LINE CONDUCTORS", page: 499, level: 3, keywords: "aerial line force, conductor weight, aerial span, minimum sag, maximum sag, aerial tension, breaking tension, pole strength, S rating, copper conductors, aluminium conductors", parent_section: "D" },
   { section: "Table D3", title: "SQUARE HARDWOOD POST (100 MPa TIMBER TO AS 2209) STRENGTH RATINGS", page: 500, level: 3, keywords: "hardwood post, timber post, square post, 100mm 125mm 150mm 175mm 200mm, strength rating, direct in ground, concrete in ground", parent_section: "D" },
@@ -606,8 +604,6 @@ export const AS_NZS_3000_TOC = [
   { section: "H5.2", title: "WSX1 mechanical protection systems", page: 538, level: 3 },
   { section: "H5.3", title: "WSX2 mechanical protection systems", page: 538, level: 3 },
   { section: "H5.4", title: "WSX3 mechanical protection systems", page: 539, level: 3 },
-  { section: "Table H1", title: "DEGREE OF PROTECTION INDICATED BY THE FIRST CHARACTERISTIC NUMERAL", page: 533, level: 3, keywords: "WS rating, fire protection, circuit integrity, time duration" },
-  { section: "Table H2", title: "DEGREE OF PROTECTION INDICATED BY THE SECOND CHARACTERISTIC NUMERAL", page: 534, level: 3, keywords: "mechanical damage, impact protection, light moderate heavy impact" },
   { section: "Figure H1", title: "WSX1 PROTECTION BY LOCATION", page: 538, level: 3 },
 
   // APPENDIX I - PROTECTIVE DEVICE RATINGS AND METRIC EQUIVALENT SIZES (Pages 540-542)
