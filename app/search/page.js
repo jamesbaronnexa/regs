@@ -68,7 +68,8 @@ export default function SearchPage() {
   const pageOffsetRef = useRef(0)
   const timeoutRef = useRef(null)
   const reconnectAttemptRef = useRef(0)
-  const queryMapRef = useRef(new Map()) // Track multiple in-flight queries
+  const querySequenceRef = useRef(0) // Sequence counter for queries
+  const pendingQueriesRef = useRef([]) // Array of {seq, queryId, text}
 
   useEffect(() => {
     loadDocuments()
@@ -362,20 +363,26 @@ Be concise. Don't explain your reasoning. Help electricians find the exact regul
             setConversationState('processing')
             startProcessingTimeout()
             
-            // Log the voice query using the ID we created when speech started
-            const queryId = queryMapRef.current.get('pending_voice')
-            if (queryId) {
-              queryMapRef.current.set('active', queryId) // Move to active
-              queryMapRef.current.delete('pending_voice')
-              
-              logQuery({
-                query_id: queryId,
-                query_text: msg.transcript,
-                query_type: 'voice',
-                document_id: selectedDocIdRef.current,
-                timestamp: new Date().toISOString()
-              })
-            }
+            // Create and log the voice query
+            const seq = querySequenceRef.current++
+            const queryId = `voice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            
+            // Add to pending queries
+            pendingQueriesRef.current.push({
+              seq,
+              queryId,
+              text: msg.transcript
+            })
+            
+            console.log(`📋 Query #${seq} logged: "${msg.transcript}"`)
+            
+            logQuery({
+              query_id: queryId,
+              query_text: msg.transcript,
+              query_type: 'voice',
+              document_id: selectedDocIdRef.current,
+              timestamp: new Date().toISOString()
+            })
           }
         }
 
@@ -386,10 +393,6 @@ Be concise. Don't explain your reasoning. Help electricians find the exact regul
           setConversationState('listening')
           setError(null)
           clearProcessingTimeout()
-          
-          // Prepare for new query - generate ID but don't log yet
-          const queryId = `voice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-          queryMapRef.current.set('pending_voice', queryId)
         }
 
         if (msg.type === 'response.audio.delta' || msg.type === 'response.audio_transcript.delta') {
@@ -416,19 +419,21 @@ Be concise. Don't explain your reasoning. Help electricians find the exact regul
             const args = JSON.parse(msg.arguments)
             console.log('🔍 Function called with:', args)
             
-            // Log the result using the active query ID
-            const queryId = queryMapRef.current.get('active')
-            if (queryId) {
+            // Get the oldest pending query (FIFO)
+            const pendingQuery = pendingQueriesRef.current.shift()
+            if (pendingQuery) {
+              console.log(`✅ Logging result for query #${pendingQuery.seq}: "${pendingQuery.text}"`)
+              
               logQuery({
-                query_id: queryId,
+                query_id: pendingQuery.queryId,
                 result_section: args.section_number,
                 result_title: args.title || '',
                 result_page: args.page || 0,
                 result_found: args.section_number !== 'NO_MATCH',
                 alternatives_count: args.alternatives?.length || 0
               })
-              // Clear the active query after logging result
-              queryMapRef.current.delete('active')
+            } else {
+              console.warn('⚠️ No pending query found for result')
             }
             
             if (args.section_number === 'NO_MATCH') {
@@ -604,6 +609,7 @@ Be concise. Don't explain your reasoning. Help electricians find the exact regul
     setVoiceStatus('')
     setConversationState('idle')
     reconnectAttemptRef.current = 0
+    pendingQueriesRef.current = [] // Clear any pending queries
   }
 
   const handleTextQuery = async (text) => {
@@ -619,9 +625,18 @@ Be concise. Don't explain your reasoning. Help electricians find the exact regul
     setAlternativeMatches([])
     startProcessingTimeout()
 
-    // Log the text query and set as active
+    // Create and log the text query
+    const seq = querySequenceRef.current++
     const queryId = `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    queryMapRef.current.set('active', queryId)
+    
+    // Add to pending queries
+    pendingQueriesRef.current.push({
+      seq,
+      queryId,
+      text
+    })
+    
+    console.log(`📋 Query #${seq} logged: "${text}"`)
     
     logQuery({
       query_id: queryId,
