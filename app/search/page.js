@@ -68,6 +68,7 @@ export default function SearchPage() {
   const pageOffsetRef = useRef(0)
   const timeoutRef = useRef(null)
   const reconnectAttemptRef = useRef(0)
+  const queryMapRef = useRef(new Map()) // Track multiple in-flight queries
 
   useEffect(() => {
     loadDocuments()
@@ -142,6 +143,19 @@ export default function SearchPage() {
     } catch (error) {
       console.error('Error loading TOC:', error)
       setError(`Failed to load table of contents: ${error.message}`)
+    }
+  }
+
+  const logQuery = async (queryData) => {
+    try {
+      await fetch('/api/log-query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queryData)
+      })
+    } catch (error) {
+      console.error('Failed to log query:', error)
+      // Don't show error to user - logging is background task
     }
   }
 
@@ -347,6 +361,21 @@ Be concise. Don't explain your reasoning. Help electricians find the exact regul
             setVoiceStatus('Processing...')
             setConversationState('processing')
             startProcessingTimeout()
+            
+            // Log the voice query using the ID we created when speech started
+            const queryId = queryMapRef.current.get('pending_voice')
+            if (queryId) {
+              queryMapRef.current.set('active', queryId) // Move to active
+              queryMapRef.current.delete('pending_voice')
+              
+              logQuery({
+                query_id: queryId,
+                query_text: msg.transcript,
+                query_type: 'voice',
+                document_id: selectedDocIdRef.current,
+                timestamp: new Date().toISOString()
+              })
+            }
           }
         }
 
@@ -357,6 +386,10 @@ Be concise. Don't explain your reasoning. Help electricians find the exact regul
           setConversationState('listening')
           setError(null)
           clearProcessingTimeout()
+          
+          // Prepare for new query - generate ID but don't log yet
+          const queryId = `voice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          queryMapRef.current.set('pending_voice', queryId)
         }
 
         if (msg.type === 'response.audio.delta' || msg.type === 'response.audio_transcript.delta') {
@@ -382,6 +415,21 @@ Be concise. Don't explain your reasoning. Help electricians find the exact regul
           try {
             const args = JSON.parse(msg.arguments)
             console.log('🔍 Function called with:', args)
+            
+            // Log the result using the active query ID
+            const queryId = queryMapRef.current.get('active')
+            if (queryId) {
+              logQuery({
+                query_id: queryId,
+                result_section: args.section_number,
+                result_title: args.title || '',
+                result_page: args.page || 0,
+                result_found: args.section_number !== 'NO_MATCH',
+                alternatives_count: args.alternatives?.length || 0
+              })
+              // Clear the active query after logging result
+              queryMapRef.current.delete('active')
+            }
             
             if (args.section_number === 'NO_MATCH') {
               console.log('❌ No match found')
@@ -570,6 +618,18 @@ Be concise. Don't explain your reasoning. Help electricians find the exact regul
     setConversationState('processing')
     setAlternativeMatches([])
     startProcessingTimeout()
+
+    // Log the text query and set as active
+    const queryId = `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    queryMapRef.current.set('active', queryId)
+    
+    logQuery({
+      query_id: queryId,
+      query_text: text,
+      query_type: 'text',
+      document_id: selectedDocIdRef.current,
+      timestamp: new Date().toISOString()
+    })
 
     dcRef.current.send(JSON.stringify({
       type: 'conversation.item.create',
