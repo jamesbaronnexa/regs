@@ -735,9 +735,10 @@ Be concise. Help electricians find the exact regulation quickly.`,
         </div>
 
         <div className="mb-6">
-          <div className="flex items-center gap-3 mb-3">
+          {/* Big central voice button */}
+          <div className="flex flex-col items-center gap-4 mb-4">
             <button
-              className={`relative h-16 w-16 rounded-xl ring-2 backdrop-blur active:scale-95 transition flex-shrink-0
+              className={`relative h-24 w-24 rounded-2xl ring-4 backdrop-blur active:scale-95 transition
                 ${isListening ? 'ring-yellow-400 bg-yellow-400/10' : 'ring-yellow-400/70 bg-white/10 hover:bg-white/15'}`}
               onClick={startVoice}
               disabled={!selectedDocId || tocEntries.length === 0 || isLoadingDocument}
@@ -747,52 +748,45 @@ Be concise. Help electricians find the exact regulation quickly.`,
                 {isListening ? (
                   <AudioBars active />
                 ) : (
-                  <BoltIcon className="h-7 w-7" color="#FACC15" />
+                  <BoltIcon className="h-10 w-10" color="#FACC15" />
                 )}
               </div>
             </button>
 
-            {isConnected ? (
-              <div className="flex-1">
-                {query ? (
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                    <div className="text-xs text-white/60 mb-1">You asked:</div>
-                    <div className="text-sm">{query}</div>
-                  </div>
-                ) : (
-                  <form onSubmit={(e) => {
-                    e.preventDefault()
-                    const input = e.target.querySelector('input')
-                    if (input.value.trim()) {
-                      handleTextQuery(input.value.trim())
-                      input.value = ''
-                    }
-                  }} className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Type your question or use voice..."
-                      className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder-white/40 outline-none focus:border-yellow-400/50"
-                    />
-                    <button
-                      type="submit"
-                      className="px-5 py-3 bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-xl text-yellow-400 text-sm font-medium transition"
-                    >
-                      Ask
-                    </button>
-                  </form>
-                )}
-              </div>
-            ) : (
-              <div className="flex-1">
-                <div className="text-sm text-white/60">
-                  Tap the voice button to start
-                </div>
+            {query && (
+              <div className="w-full p-3 rounded-xl bg-white/5 border border-white/10">
+                <div className="text-xs text-white/60 mb-1">You asked:</div>
+                <div className="text-sm">{query}</div>
               </div>
             )}
           </div>
 
+          {/* Text input below - only show when connected */}
+          {isConnected && (
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              const input = e.target.querySelector('input')
+              if (input.value.trim()) {
+                handleTextQuery(input.value.trim())
+                input.value = ''
+              }
+            }} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Or type your question here..."
+                className="flex-1 px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white text-base placeholder-white/40 outline-none focus:border-yellow-400/50"
+              />
+              <button
+                type="submit"
+                className="px-6 py-4 bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-xl text-yellow-400 text-base font-medium transition"
+              >
+                Ask
+              </button>
+            </form>
+          )}
+
           {voiceStatus && (
-            <div className="text-xs text-white/60 text-center">{voiceStatus}</div>
+            <div className="text-sm text-white/70 text-center mt-3">{voiceStatus}</div>
           )}
         </div>
 
