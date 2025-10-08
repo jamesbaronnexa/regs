@@ -147,6 +147,14 @@ export default function SearchPage() {
     }
   }
 
+  useEffect(() => {
+    if (tocEntries.length > 0) {
+      console.log('📋 First TOC entry:', tocEntries[0])
+      console.log('📋 Has entry_type?', tocEntries[0].entry_type)
+      console.log('📋 Has full_path?', tocEntries[0].full_path)
+    }
+  }, [tocEntries])
+
   const logQuery = async (queryData) => {
     try {
       await fetch('/api/log-query', {
@@ -282,7 +290,7 @@ export default function SearchPage() {
               type: 'server_vad',
               threshold: 0.5,
               prefix_padding_ms: 300,
-              silence_duration_ms: 500
+              silence_duration_ms: 1200  // Longer pause before auto-response
             },
             instructions: `You are an AI assistant for electricians searching electrical regulations. The electrician will ask technical questions about wiring, circuits, installations, safety requirements, or standards.
 
@@ -294,8 +302,9 @@ When an electrician asks a question:
 1. Understand their technical question (could be about clauses, tables, requirements, or specifications)
 2. Find the BEST matching section - this could be a clause, table, appendix, or requirement
 3. ALWAYS check for related alternatives - include up to 3 other sections that are also relevant to the question
-4. Call find_section with your best match AND alternatives array
-5. After the function returns, respond with ONLY: "Look at [Clause/Table] [number]" - nothing else
+4. Use the full_path to understand context - for example "[TABLE] Table 6.1" with path "Section 6 > Baths, showers > Table 6.1" means this table is specifically about bathroom regulations, not general tables.
+5. If the user asks for a table find the table that matches. Ie "Table 3.1", you say here is Table 3.1
+5. Call find_section with your best match AND alternatives array
 
 Examples of when to include alternatives:
 - Question about "cable sizing" → Main: cable sizing table, Alternatives: derating factors, voltage drop
@@ -392,6 +401,10 @@ Be concise. Help electricians find the exact regulation quickly.`,
           setConversationState('listening')
           setError(null)
           clearProcessingTimeout()
+        }
+
+        if (msg.type === 'input_audio_buffer.speech_stopped') {
+          setVoiceStatus('Processing...')
         }
 
         if (msg.type === 'response.audio.delta' || msg.type === 'response.audio_transcript.delta') {
@@ -516,7 +529,7 @@ Be concise. Help electricians find the exact regulation quickly.`,
               type: 'response.create',
               response: {
                 modalities: ['audio', 'text'],
-                instructions: 'Say only: "Look at Clause" then the number. Nothing else.'
+                instructions: 'Say only: "Look at Clause/ table / figure" then the number. Nothing else.'
               }
             }))
             
