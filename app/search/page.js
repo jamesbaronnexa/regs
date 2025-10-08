@@ -40,8 +40,8 @@ export default function SearchPage() {
   // Core state
   const [isListening, setIsListening] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
-  const [conversationState, setConversationState] = useState('idle') // idle, listening, processing, speaking, ready
-  const [voiceStatus, setVoiceStatus] = useState('')
+  const [conversationState, setConversationState] = useState('idle')
+  const [voiceStatus, setVoiceStatus] = useState('Push to talk')
   const [query, setQuery] = useState('')
   const [error, setError] = useState(null)
   
@@ -50,6 +50,7 @@ export default function SearchPage() {
   const [pageNumber, setPageNumber] = useState(1)
   const [pdfUrl, setPdfUrl] = useState(null)
   const [alternativeMatches, setAlternativeMatches] = useState([])
+  const [currentSection, setCurrentSection] = useState(null)
   
   // Document state
   const [documents, setDocuments] = useState([])
@@ -68,8 +69,8 @@ export default function SearchPage() {
   const pageOffsetRef = useRef(0)
   const timeoutRef = useRef(null)
   const reconnectAttemptRef = useRef(0)
-  const querySequenceRef = useRef(0) // Sequence counter for queries
-  const pendingQueriesRef = useRef([]) // Array of {seq, queryId, text}
+  const querySequenceRef = useRef(0)
+  const pendingQueriesRef = useRef([])
 
   useEffect(() => {
     loadDocuments()
@@ -147,14 +148,6 @@ export default function SearchPage() {
     }
   }
 
-  useEffect(() => {
-    if (tocEntries.length > 0) {
-      console.log('📋 First TOC entry:', tocEntries[0])
-      console.log('📋 Has entry_type?', tocEntries[0].entry_type)
-      console.log('📋 Has full_path?', tocEntries[0].full_path)
-    }
-  }, [tocEntries])
-
   const logQuery = async (queryData) => {
     try {
       await fetch('/api/log-query', {
@@ -164,7 +157,6 @@ export default function SearchPage() {
       })
     } catch (error) {
       console.error('Failed to log query:', error)
-      // Don't show error to user - logging is background task
     }
   }
 
@@ -185,7 +177,7 @@ export default function SearchPage() {
           setConversationState('ready')
         }
       }, 2000)
-    }, 10000) // 10 second timeout
+    }, 10000)
   }
 
   const startVoice = async () => {
@@ -229,7 +221,7 @@ export default function SearchPage() {
       console.error('Voice error:', error)
       setError('Microphone access denied or unavailable')
       setIsListening(false)
-      setVoiceStatus('')
+      setVoiceStatus('Push to talk')
       setConversationState('idle')
     }
   }
@@ -290,32 +282,29 @@ export default function SearchPage() {
               type: 'server_vad',
               threshold: 0.5,
               prefix_padding_ms: 300,
-              silence_duration_ms: 1200  // Longer pause before auto-response
+              silence_duration_ms: 1200
             },
-            instructions: `You are an AI assistant for electricians searching electrical regulations. The electrician will ask technical questions about wiring, circuits, installations, safety requirements, or standards.
+            instructions: `You are a PDF search assistant for electricians. When asked a question, you MUST ALWAYS call the find_section function - never just talk about the regulation.
 
-Here is the table of contents for this regulation document:
+Here is the table of contents:
 
 ${tocEntries.map(e => `${e.section_number}: ${e.title} (Page ${e.document_page || e.page})`).join('\n')}
 
-When an electrician asks a question:
-1. Understand their technical question (could be about clauses, tables, requirements, or specifications)
-2. Find the BEST matching section - this could be a clause, table, appendix, or requirement
-3. ALWAYS check for related alternatives - include up to 3 other sections that are also relevant to the question
-4. Use the full_path to understand context - for example "[TABLE] Table 6.1" with path "Section 6 > Baths, showers > Table 6.1" means this table is specifically about bathroom regulations, not general tables.
-5. If the user asks for a table find the table that matches. Ie "Table 3.1", you say here is Table 3.1
-5. Call find_section with your best match AND alternatives array
+CRITICAL: When searching for sections:
+- Match the EXACT section number if possible (e.g., "Table 5.1" matches "Table 5.1", NOT "5.1")
+- "Table X.Y" is different from "Section X.Y" or just "X.Y"
+- Look for the full section number including prefixes like "Table", "Figure", "Appendix"
 
-Examples of when to include alternatives:
-- Question about "cable sizing" → Main: cable sizing table, Alternatives: derating factors, voltage drop
-- Question about "bathroom zones" → Main: bathroom requirements, Alternatives: IP ratings, earthing requirements
-- Question about general topic → Always include 2-3 related sections
+Your job:
+1. Find the BEST matching section from the TOC above
+2. Include up to 3 alternatives that are also relevant
+3. ALWAYS call find_section (required - do not talk about it)
 
-If nothing matches reasonably well:
+If nothing matches:
 - Use section_number "NO_MATCH"
 - Say: "I couldn't find that in this regulation."
 
-Be concise. Help electricians find the exact regulation quickly.`,
+Be concise and always call the function.`,
             tools: [
               {
                 type: 'function',
@@ -371,11 +360,9 @@ Be concise. Help electricians find the exact regulation quickly.`,
             setConversationState('processing')
             startProcessingTimeout()
             
-            // Create and log the voice query
             const seq = querySequenceRef.current++
             const queryId = `voice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
             
-            // Add to pending queries
             pendingQueriesRef.current.push({
               seq,
               queryId,
@@ -384,19 +371,13 @@ Be concise. Help electricians find the exact regulation quickly.`,
             
             console.log(`📋 Query #${seq} logged: "${msg.transcript}"`)
             
-            logQuery({
-              query_id: queryId,
-              query_text: msg.transcript,
-              query_type: 'voice',
-              document_id: selectedDocIdRef.current,
-              timestamp: new Date().toISOString()
-            })
-          }
+           }
         }
 
         if (msg.type === 'input_audio_buffer.speech_started') {
           setQuery('')
           setAlternativeMatches([])
+          setCurrentSection(null)
           setVoiceStatus('Listening...')
           setConversationState('listening')
           setError(null)
@@ -418,7 +399,6 @@ Be concise. Help electricians find the exact regulation quickly.`,
           setVoiceStatus('Ready - ask another question!')
           clearProcessingTimeout()
           
-          // Clear query after a delay
           setTimeout(() => {
             if (conversationState === 'ready') {
               setQuery('')
@@ -431,19 +411,22 @@ Be concise. Help electricians find the exact regulation quickly.`,
             const args = JSON.parse(msg.arguments)
             console.log('🔍 Function called with:', args)
             
-            // Get the oldest pending query (FIFO)
             const pendingQuery = pendingQueriesRef.current.shift()
             if (pendingQuery) {
-              console.log(`✅ Logging result for query #${pendingQuery.seq}: "${pendingQuery.text}"`)
-              
-              logQuery({
-                query_id: pendingQuery.queryId,
-                result_section: args.section_number,
-                result_title: args.title || '',
-                result_page: args.page || 0,
-                result_found: args.section_number !== 'NO_MATCH',
-                alternatives_count: args.alternatives?.length || 0
-              })
+               console.log(`✅ Logging complete query for #${pendingQuery.seq}: "${pendingQuery.text}"`)
+  
+               logQuery({
+                 query_id: pendingQuery.queryId,
+                 query_text: pendingQuery.text,  // ADD THIS
+                 query_type: 'voice',              // ADD THIS
+                 document_id: selectedDocIdRef.current,  // ADD THIS
+                 timestamp: new Date().toISOString(),    // ADD THIS
+                 result_section: args.section_number,
+                 result_title: args.title || '',
+                 result_page: args.page || 0,
+                 result_found: args.section_number !== 'NO_MATCH',
+                 alternatives_count: args.alternatives?.length || 0
+               })
             } else {
               console.warn('⚠️ No pending query found for result')
             }
@@ -451,6 +434,7 @@ Be concise. Help electricians find the exact regulation quickly.`,
             if (args.section_number === 'NO_MATCH') {
               console.log('❌ No match found')
               setAlternativeMatches([])
+              setCurrentSection(null)
               
               dc.send(JSON.stringify({
                 type: 'conversation.item.create',
@@ -507,6 +491,11 @@ Be concise. Help electricians find the exact regulation quickly.`,
             const actualPage = parseInt(args.page) + (pageOffsetRef.current || 0)
             console.log(`📄 Navigation: Doc page ${args.page} + offset ${pageOffsetRef.current} = PDF page ${actualPage}`)
             
+            setCurrentSection({
+              section_number: args.section_number,
+              title: args.title
+            })
+            
             setPageNumber(actualPage)
             if (!showViewer) {
               setShowViewer(true)
@@ -517,26 +506,27 @@ Be concise. Help electricians find the exact regulation quickly.`,
             console.log('✅ PDF opened successfully')
             
             dc.send(JSON.stringify({
-              type: 'conversation.item.create',
-              item: {
-                type: 'function_call_output',
-                call_id: msg.call_id,
-                output: args.section_number
-              }
-            }))
-            
-            dc.send(JSON.stringify({ 
-              type: 'response.create',
-              response: {
-                modalities: ['audio', 'text'],
-                instructions: 'Say only: "Look at Clause/ table / figure" then the number. Nothing else.'
-              }
-            }))
+  type: 'conversation.item.create',
+  item: {
+    type: 'function_call_output',
+    call_id: msg.call_id,
+    output: args.section_number
+  }
+}))
+
+dc.send(JSON.stringify({ 
+  type: 'response.create',
+  response: {
+    modalities: ['audio', 'text'],
+    instructions: `Say: "Look at ${args.section_number}" - nothing else.`
+  }
+}))
             
           } catch (e) {
             console.error('❌ PDF Error:', e)
             setError(`Failed to open PDF: ${e.message}`)
             setAlternativeMatches([])
+            setCurrentSection(null)
             
             dc.send(JSON.stringify({
               type: 'conversation.item.create',
@@ -558,9 +548,8 @@ Be concise. Help electricians find the exact regulation quickly.`,
         if (msg.type === 'error') {
           console.error('🚨 API Error:', msg.error)
           setError(`${msg.error?.message || 'Unknown error'}. Tap voice button to retry.`)
-          setVoiceStatus('')
+          setVoiceStatus('Push to talk')
           clearProcessingTimeout()
-          // Don't auto-disconnect - let them try again
         }
 
         if (msg.type === 'response.done') {
@@ -618,10 +607,10 @@ Be concise. Help electricians find the exact regulation quickly.`,
 
     setIsListening(false)
     setIsConnected(false)
-    setVoiceStatus('')
+    setVoiceStatus('Push to talk')
     setConversationState('idle')
     reconnectAttemptRef.current = 0
-    pendingQueriesRef.current = [] // Clear any pending queries
+    pendingQueriesRef.current = []
   }
 
   const handleTextQuery = async (text) => {
@@ -630,34 +619,23 @@ Be concise. Help electricians find the exact regulation quickly.`,
       return
     }
 
-    console.log('📝 Sending text query:', text)
+    console.log('🔍 Sending text query:', text)
     setQuery(text)
     setVoiceStatus('Processing...')
     setConversationState('processing')
     setAlternativeMatches([])
+    setCurrentSection(null)
     startProcessingTimeout()
 
-    // Create and log the text query
     const seq = querySequenceRef.current++
     const queryId = `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
-    // Add to pending queries
     pendingQueriesRef.current.push({
       seq,
       queryId,
       text
     })
-    
-    console.log(`📋 Query #${seq} logged: "${text}"`)
-    
-    logQuery({
-      query_id: queryId,
-      query_text: text,
-      query_type: 'text',
-      document_id: selectedDocIdRef.current,
-      timestamp: new Date().toISOString()
-    })
-
+        
     dcRef.current.send(JSON.stringify({
       type: 'conversation.item.create',
       item: {
@@ -735,7 +713,6 @@ Be concise. Help electricians find the exact regulation quickly.`,
         </div>
 
         <div className="mb-6">
-          {/* Big central voice button */}
           <div className="flex flex-col items-center gap-4 mb-4">
             <button
               className={`relative h-24 w-24 rounded-2xl ring-4 backdrop-blur active:scale-95 transition
@@ -759,30 +736,42 @@ Be concise. Help electricians find the exact regulation quickly.`,
                 <div className="text-sm">{query}</div>
               </div>
             )}
+            
+            {currentSection && (
+              <div className="w-full p-4 rounded-xl bg-yellow-400/20 border-2 border-yellow-400/50">
+                <div className="text-xs text-yellow-400/80 mb-1 font-medium">Found:</div>
+                <div className="text-base font-semibold text-yellow-400">{currentSection.section_number}</div>
+                <div className="text-sm text-white/90 mt-1">{currentSection.title}</div>
+              </div>
+            )}
           </div>
 
-          {/* Text input below - only show when connected */}
           {isConnected && (
-            <form onSubmit={(e) => {
-              e.preventDefault()
-              const input = e.target.querySelector('input')
-              if (input.value.trim()) {
-                handleTextQuery(input.value.trim())
-                input.value = ''
-              }
-            }} className="flex gap-2">
+            <div className="flex gap-2">
               <input
                 type="text"
                 placeholder="Or type your question here..."
                 className="flex-1 px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white text-base placeholder-white/40 outline-none focus:border-yellow-400/50"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.target.value.trim()) {
+                    handleTextQuery(e.target.value.trim())
+                    e.target.value = ''
+                  }
+                }}
               />
               <button
-                type="submit"
+                onClick={(e) => {
+                  const input = e.target.previousElementSibling
+                  if (input.value.trim()) {
+                    handleTextQuery(input.value.trim())
+                    input.value = ''
+                  }
+                }}
                 className="px-6 py-4 bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-xl text-yellow-400 text-base font-medium transition"
               >
                 Ask
               </button>
-            </form>
+            </div>
           )}
 
           {voiceStatus && (
@@ -804,6 +793,7 @@ Be concise. Help electricians find the exact regulation quickly.`,
           onClose={() => {
             setShowViewer(false)
             setAlternativeMatches([])
+            setCurrentSection(null)
           }}
           onPageChange={setPageNumber}
           alternativeMatches={alternativeMatches}
@@ -811,6 +801,10 @@ Be concise. Help electricians find the exact regulation quickly.`,
             const altPage = parseInt(alt.page) + (pageOffsetRef.current || 0)
             console.log(`📄 Navigating to alternative: ${alt.section_number} at page ${altPage}`)
             setPageNumber(altPage)
+            setCurrentSection({
+              section_number: alt.section_number,
+              title: alt.title
+            })
           }}
           isListening={isListening}
           voiceStatus={voiceStatus}
