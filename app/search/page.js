@@ -44,6 +44,7 @@ export default function SearchPage() {
   const [voiceStatus, setVoiceStatus] = useState('Push to talk')
   const [query, setQuery] = useState('')
   const [error, setError] = useState(null)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
   
   // PDF state
   const [showViewer, setShowViewer] = useState(false)
@@ -102,6 +103,15 @@ export default function SearchPage() {
       }
     }
   }, [selectedDocId, documents])
+
+  useEffect(() => {
+  loadDocuments()
+  
+  // Hide loading screen after 1 second minimum
+  setTimeout(() => {
+    setIsInitialLoading(false)
+  }, 1000)
+}, [])
 
   const loadDocuments = async () => {
     try {
@@ -659,6 +669,13 @@ dc.send(JSON.stringify({
   }, [])
 
   return (
+  <>
+    {isInitialLoading && (
+  <div className="fixed inset-0 bg-neutral-950 z-50 flex items-center justify-center">
+    <LogoRounded className="h-24 w-24 animate-pulse" />
+  </div>
+)}
+
     <div className="relative min-h-dvh bg-neutral-950 text-white flex flex-col items-center p-4">
       <div
         aria-hidden
@@ -811,8 +828,9 @@ dc.send(JSON.stringify({
           query={query}
           onVoiceClick={startVoice}
           onTextQuery={handleTextQuery}
-        />
+       />
       )}
     </div>
+  </>
   )
 }
