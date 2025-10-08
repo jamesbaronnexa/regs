@@ -110,7 +110,7 @@ export default function SearchPage() {
   // Hide loading screen after 1 second minimum
   setTimeout(() => {
     setIsInitialLoading(false)
-  }, 1000)
+  }, 2000)
 }, [])
 
   const loadDocuments = async () => {
