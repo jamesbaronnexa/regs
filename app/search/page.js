@@ -41,7 +41,7 @@ export default function SearchPage() {
   const [isListening, setIsListening] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
   const [conversationState, setConversationState] = useState('idle')
-  const [voiceStatus, setVoiceStatus] = useState('Push to talk')
+  const [voiceStatus, setVoiceStatus] = useState('Tap to talk')
   const [query, setQuery] = useState('')
   const [error, setError] = useState(null)
   const [isInitialLoading, setIsInitialLoading] = useState(true)
@@ -97,8 +97,10 @@ export default function SearchPage() {
             pdfUrlRef.current = url
           }
           setIsLoadingDocument(false)
+          setVoiceStatus('Tap to talk')
         }).catch(() => {
           setIsLoadingDocument(false)
+          setVoiceStatus('Tap to talk')
         })
       }
     }
@@ -123,10 +125,7 @@ export default function SearchPage() {
       setDocuments(data.documents || [])
       documentsRef.current = data.documents || []
       
-      if (data.documents?.length > 0 && !selectedDocId) {
-        setSelectedDocId(data.documents[0].id)
-        selectedDocIdRef.current = data.documents[0].id
-      }
+      // Don't auto-select a document - make user choose
     } catch (error) {
       console.error('Error loading documents:', error)
       setError(`Failed to load documents: ${error.message}`)
@@ -192,7 +191,14 @@ export default function SearchPage() {
 
   const startVoice = async () => {
     if (isListening) {
-      stopVoice()
+      // Stop listening but keep connection open
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop())
+        localStreamRef.current = null
+      }
+      setIsListening(false)
+      setVoiceStatus('Tap to talk')
+      setConversationState('idle')
       return
     }
 
@@ -215,14 +221,21 @@ export default function SearchPage() {
       })
       localStreamRef.current = localStream
 
+      // If already connected, just add the track
       if (pcRef.current && dcRef.current && dcRef.current.readyState === 'open') {
         const audioTrack = localStream.getAudioTracks()[0]
-        pcRef.current.addTrack(audioTrack, localStream)
+        const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'audio')
+        if (sender) {
+          await sender.replaceTrack(audioTrack)
+        } else {
+          pcRef.current.addTrack(audioTrack, localStream)
+        }
         setVoiceStatus('Listening - just speak!')
         setConversationState('ready')
         return
       }
 
+      // Otherwise start new connection
       await startConnection(localStream)
       setVoiceStatus('Listening - just speak!')
       setConversationState('ready')
@@ -231,7 +244,7 @@ export default function SearchPage() {
       console.error('Voice error:', error)
       setError('Microphone access denied or unavailable')
       setIsListening(false)
-      setVoiceStatus('Push to talk')
+      setVoiceStatus('Tap to talk')
       setConversationState('idle')
     }
   }
@@ -264,14 +277,10 @@ export default function SearchPage() {
 
       dc.onclose = () => {
         console.log('Data channel closed')
-        if (isListening && reconnectAttemptRef.current < 3) {
-          reconnectAttemptRef.current++
-          setVoiceStatus(`Connection lost - reconnecting (${reconnectAttemptRef.current}/3)...`)
-          setTimeout(() => startConnection(localStreamRef.current), 1000)
-        } else {
-          setVoiceStatus('Connection lost')
-          setConversationState('idle')
-        }
+        setIsConnected(false)
+        setIsListening(false)
+        setVoiceStatus('Tap to talk')
+        setConversationState('idle')
       }
 
       dc.onopen = () => {
@@ -406,14 +415,8 @@ Be concise and always call the function.`,
 
         if (msg.type === 'response.audio.done' || msg.type === 'response.content_part.done') {
           setConversationState('ready')
-          setVoiceStatus('Ready - ask another question!')
+          setVoiceStatus('Tap to ask again')
           clearProcessingTimeout()
-          
-          setTimeout(() => {
-            if (conversationState === 'ready') {
-              setQuery('')
-            }
-          }, 3000)
         }
 
         if (msg.type === 'response.function_call_arguments.done' && msg.name === 'find_section') {
@@ -427,10 +430,10 @@ Be concise and always call the function.`,
   
                logQuery({
                  query_id: pendingQuery.queryId,
-                 query_text: pendingQuery.text,  // ADD THIS
-                 query_type: 'voice',              // ADD THIS
-                 document_id: selectedDocIdRef.current,  // ADD THIS
-                 timestamp: new Date().toISOString(),    // ADD THIS
+                 query_text: pendingQuery.text,
+                 query_type: 'voice',
+                 document_id: selectedDocIdRef.current,
+                 timestamp: new Date().toISOString(),
                  result_section: args.section_number,
                  result_title: args.title || '',
                  result_page: args.page || 0,
@@ -465,13 +468,19 @@ Be concise and always call the function.`,
               
               setVoiceStatus('No match found')
               setTimeout(() => {
-                setVoiceStatus('Ready - try rephrasing')
-                setConversationState('ready')
+                if (localStreamRef.current) {
+                  console.log('🎤 Stopping microphone after no match')
+                  localStreamRef.current.getTracks().forEach(track => track.stop())
+                  localStreamRef.current = null
+                  setIsListening(false)
+                  setVoiceStatus('Tap to talk')
+                  setConversationState('idle')
+                }
               }, 2000)
               return
             }
             
-            console.log('📍 Opening section:', args.section_number, 'at page', args.page)
+            console.log('📖 Opening section:', args.section_number, 'at page', args.page)
             setVoiceStatus('Opening PDF...')
             
             if (!args.page || isNaN(args.page)) {
@@ -549,22 +558,40 @@ dc.send(JSON.stringify({
             dc.send(JSON.stringify({ type: 'response.create' }))
             
             setTimeout(() => {
-              setVoiceStatus('Ready - try again')
-              setConversationState('ready')
-            }, 1500)
+              if (localStreamRef.current) {
+                console.log('🎤 Stopping microphone after PDF error')
+                localStreamRef.current.getTracks().forEach(track => track.stop())
+                localStreamRef.current = null
+                setIsListening(false)
+                setVoiceStatus('Tap to talk')
+                setConversationState('idle')
+              }
+            }, 2000)
           }
         }
 
         if (msg.type === 'error') {
           console.error('🚨 API Error:', msg.error)
           setError(`${msg.error?.message || 'Unknown error'}. Tap voice button to retry.`)
-          setVoiceStatus('Push to talk')
+          setVoiceStatus('Tap to talk')
           clearProcessingTimeout()
         }
 
         if (msg.type === 'response.done') {
           console.log('✓ Response complete')
           clearProcessingTimeout()
+          
+          // Auto-stop mic after response, but keep connection open
+          setTimeout(() => {
+            if (localStreamRef.current) {
+              console.log('🎤 Stopping microphone after response')
+              localStreamRef.current.getTracks().forEach(track => track.stop())
+              localStreamRef.current = null
+              setIsListening(false)
+              setVoiceStatus('Tap to talk')
+              setConversationState('idle')
+            }
+          }, 500)
         }
       }
 
@@ -617,7 +644,7 @@ dc.send(JSON.stringify({
 
     setIsListening(false)
     setIsConnected(false)
-    setVoiceStatus('Push to talk')
+    setVoiceStatus('Tap to talk')
     setConversationState('idle')
     reconnectAttemptRef.current = 0
     pendingQueriesRef.current = []
@@ -629,7 +656,7 @@ dc.send(JSON.stringify({
       return
     }
 
-    console.log('🔍 Sending text query:', text)
+    console.log('🔎 Sending text query:', text)
     setQuery(text)
     setVoiceStatus('Processing...')
     setConversationState('processing')
@@ -668,6 +695,13 @@ dc.send(JSON.stringify({
     clearProcessingTimeout()
   }, [])
 
+  // Get current document title
+  const currentDocTitle = selectedDocId 
+    ? (documents.find(d => d.id === selectedDocId)?.title || 
+       documents.find(d => d.id === selectedDocId)?.filename || 
+       'Select a regulation')
+    : 'Select a regulation'
+
   return (
   <>
     {isInitialLoading && (
@@ -696,7 +730,19 @@ dc.send(JSON.stringify({
       </header>
 
       <div className="relative z-10 w-full max-w-md">
-        <div className="mb-6">
+        {/* Prominent document display */}
+        <div className="mb-6 p-5 rounded-2xl bg-neutral-900/80 border-2 border-yellow-400/60">
+          {selectedDocId && (
+            <>
+              <div className="text-xs font-semibold text-yellow-400/90 uppercase tracking-wider mb-2">
+                Currently Searching
+              </div>
+              <div className="text-lg font-bold text-white mb-3">
+                {currentDocTitle}
+              </div>
+            </>
+          )}
+          
           <select
             value={selectedDocId || ''}
             onChange={async (e) => {
@@ -705,28 +751,30 @@ dc.send(JSON.stringify({
               selectedDocIdRef.current = newId
               setVoiceStatus('Loading document...')
             }}
-            className="w-full rounded-xl bg-white/10 px-4 py-2 outline-none text-white"
-            style={{ background: 'rgba(255,255,255,0.1)' }}
+            className="w-full rounded-xl bg-white/10 hover:bg-white/15 px-4 py-3 outline-none text-white font-medium transition cursor-pointer border border-white/20"
             disabled={isLoadingDocument}
           >
-            <option value="" disabled>Select a document</option>
+            <option value="" disabled style={{ background: '#0B0F19' }}>
+              Choose a regulation to search
+            </option>
             {documents.map(doc => (
               <option key={doc.id} value={doc.id} style={{ background: '#0B0F19' }}>
                 {doc.title || doc.filename}
               </option>
             ))}
           </select>
-          {selectedDocId && (
-            <div className="mt-2 text-xs text-white/60">
-              {isLoadingDocument ? (
-                '⏳ Loading document...'
-              ) : tocEntries.length > 0 ? (
-                `📚 ${tocEntries.length} sections loaded`
-              ) : (
-                'Loading table of contents...'
-              )}
-            </div>
-          )}
+          
+          <div className="mt-3 text-sm">
+            {!selectedDocId ? (
+              <span className="text-yellow-400/80">⚠️ Please select a regulation to begin</span>
+            ) : isLoadingDocument ? (
+              <span className="text-yellow-400/80">⏳ Loading document...</span>
+            ) : tocEntries.length > 0 ? (
+              <span className="text-green-400/90">✓ {tocEntries.length} sections ready</span>
+            ) : (
+              <span className="text-white/60">Loading table of contents...</span>
+            )}
+          </div>
         </div>
 
         <div className="mb-6">
