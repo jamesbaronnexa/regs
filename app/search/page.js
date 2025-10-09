@@ -75,6 +75,11 @@ export default function SearchPage() {
 
   useEffect(() => {
     loadDocuments()
+    
+    // Hide loading screen after 1.5 seconds minimum
+    setTimeout(() => {
+      setIsInitialLoading(false)
+    }, 1500)
   }, [])
 
   useEffect(() => {
@@ -105,15 +110,6 @@ export default function SearchPage() {
       }
     }
   }, [selectedDocId, documents])
-
-  useEffect(() => {
-  loadDocuments()
-  
-  // Hide loading screen after 1 second minimum
-  setTimeout(() => {
-    setIsInitialLoading(false)
-  }, 2000)
-}, [])
 
   const loadDocuments = async () => {
     try {
@@ -525,21 +521,21 @@ Be concise and always call the function.`,
             console.log('✅ PDF opened successfully')
             
             dc.send(JSON.stringify({
-  type: 'conversation.item.create',
-  item: {
-    type: 'function_call_output',
-    call_id: msg.call_id,
-    output: args.section_number
-  }
-}))
+              type: 'conversation.item.create',
+              item: {
+                type: 'function_call_output',
+                call_id: msg.call_id,
+                output: args.section_number
+              }
+            }))
 
-dc.send(JSON.stringify({ 
-  type: 'response.create',
-  response: {
-    modalities: ['audio', 'text'],
-    instructions: `Say: "Look at ${args.section_number}" - nothing else.`
-  }
-}))
+            dc.send(JSON.stringify({ 
+              type: 'response.create',
+              response: {
+                modalities: ['audio', 'text'],
+                instructions: `Say: "Look at ${args.section_number}" - nothing else.`
+              }
+            }))
             
           } catch (e) {
             console.error('❌ PDF Error:', e)
@@ -588,9 +584,9 @@ dc.send(JSON.stringify({
               localStreamRef.current.getTracks().forEach(track => track.stop())
               localStreamRef.current = null
               setIsListening(false)
-              setVoiceStatus('Tap to talk')
               setConversationState('idle')
             }
+            setVoiceStatus('Tap to talk')
           }, 500)
         }
       }
@@ -703,182 +699,182 @@ dc.send(JSON.stringify({
     : 'Select a regulation'
 
   return (
-  <>
-    {isInitialLoading && (
-  <div className="fixed inset-0 bg-neutral-950 z-50 flex items-center justify-center">
-    <LogoRounded className="h-24 w-24 animate-pulse" />
-  </div>
-)}
-
-    <div className="relative min-h-dvh bg-neutral-950 text-white flex flex-col items-center p-4">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 opacity-20"
-        style={{
-          backgroundImage: `
-            repeating-linear-gradient(0deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 24px),
-            repeating-linear-gradient(90deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 24px)
-          `
-        }}
-      />
-
-      <header className="relative z-10 w-full max-w-md mt-6 mb-4">
-        <div className="flex items-center gap-3">
-          <LogoRounded className="h-8 w-8" />
-          <h1 className="text-base font-semibold tracking-tight">Regs</h1>
+    <>
+      {isInitialLoading && (
+        <div className="fixed inset-0 bg-neutral-950 z-50 flex flex-col items-center justify-center gap-4">
+          <LogoRounded className="h-24 w-24 animate-pulse" />
+          <h1 className="text-2xl font-bold tracking-tight text-white">Regs</h1>
         </div>
-      </header>
+      )}
 
-      <div className="relative z-10 w-full max-w-md">
-        {/* Prominent document display */}
-        <div className="mb-6 p-5 rounded-2xl bg-neutral-900/80 border-2 border-yellow-400/60">
-          {selectedDocId && (
-            <>
-              <div className="text-xs font-semibold text-yellow-400/90 uppercase tracking-wider mb-2">
-                Currently Searching
-              </div>
-              <div className="text-lg font-bold text-white mb-3">
-                {currentDocTitle}
-              </div>
-            </>
-          )}
-          
-          <select
-            value={selectedDocId || ''}
-            onChange={async (e) => {
-              const newId = Number(e.target.value)
-              setSelectedDocId(newId)
-              selectedDocIdRef.current = newId
-              setVoiceStatus('Loading document...')
-            }}
-            className="w-full rounded-xl bg-white/10 hover:bg-white/15 px-4 py-3 outline-none text-white font-medium transition cursor-pointer border border-white/20"
-            disabled={isLoadingDocument}
-          >
-            <option value="" disabled style={{ background: '#0B0F19' }}>
-              Choose a regulation to search
-            </option>
-            {documents.map(doc => (
-              <option key={doc.id} value={doc.id} style={{ background: '#0B0F19' }}>
-                {doc.title || doc.filename}
-              </option>
-            ))}
-          </select>
-          
-          <div className="mt-3 text-sm">
-            {!selectedDocId ? (
-              <span className="text-yellow-400/80">⚠️ Please select a regulation to begin</span>
-            ) : isLoadingDocument ? (
-              <span className="text-yellow-400/80">⏳ Loading document...</span>
-            ) : tocEntries.length > 0 ? (
-              <span className="text-green-400/90">✓ {tocEntries.length} sections ready</span>
-            ) : (
-              <span className="text-white/60">Loading table of contents...</span>
-            )}
+      <div className="relative min-h-dvh bg-neutral-950 text-white flex flex-col items-center p-4">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 opacity-20"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(0deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 24px),
+              repeating-linear-gradient(90deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 24px)
+            `
+          }}
+        />
+
+        <header className="relative z-10 w-full max-w-md mt-6 mb-4">
+          <div className="flex items-center gap-3">
+            <LogoRounded className="h-8 w-8" />
+            <h1 className="text-base font-semibold tracking-tight">Regs</h1>
           </div>
-        </div>
+        </header>
 
-        <div className="mb-6">
-          <div className="flex flex-col items-center gap-4 mb-4">
-            <button
-              className={`relative h-24 w-24 rounded-2xl ring-4 backdrop-blur active:scale-95 transition
-                ${isListening ? 'ring-yellow-400 bg-yellow-400/10' : 'ring-yellow-400/70 bg-white/10 hover:bg-white/15'}`}
-              onClick={startVoice}
-              disabled={!selectedDocId || tocEntries.length === 0 || isLoadingDocument}
-              aria-label="Tap to talk"
-            >
-              <div className="flex items-center justify-center h-full relative">
-                {isListening ? (
-                  <AudioBars active />
-                ) : (
-                  <BoltIcon className="h-10 w-10" color="#FACC15" />
-                )}
-              </div>
-            </button>
-
-            {query && (
-              <div className="w-full p-3 rounded-xl bg-white/5 border border-white/10">
-                <div className="text-xs text-white/60 mb-1">You asked:</div>
-                <div className="text-sm">{query}</div>
-              </div>
+        <div className="relative z-10 w-full max-w-md">
+          <div className="mb-6 p-5 rounded-2xl bg-neutral-900/80 border-2 border-yellow-400/60">
+            {selectedDocId && (
+              <>
+                <div className="text-xs font-semibold text-yellow-400/90 uppercase tracking-wider mb-2">
+                  Currently Searching
+                </div>
+                <div className="text-lg font-bold text-white mb-3">
+                  {currentDocTitle}
+                </div>
+              </>
             )}
             
-            {currentSection && (
-              <div className="w-full p-4 rounded-xl bg-yellow-400/20 border-2 border-yellow-400/50">
-                <div className="text-xs text-yellow-400/80 mb-1 font-medium">Found:</div>
-                <div className="text-base font-semibold text-yellow-400">{currentSection.section_number}</div>
-                <div className="text-sm text-white/90 mt-1">{currentSection.title}</div>
+            <select
+              value={selectedDocId || ''}
+              onChange={async (e) => {
+                const newId = Number(e.target.value)
+                setSelectedDocId(newId)
+                selectedDocIdRef.current = newId
+                setVoiceStatus('Loading document...')
+              }}
+              className="w-full rounded-xl bg-white/10 hover:bg-white/15 px-4 py-3 outline-none text-white font-medium transition cursor-pointer border border-white/20"
+              disabled={isLoadingDocument}
+            >
+              <option value="" disabled style={{ background: '#0B0F19' }}>
+                Choose a regulation to search
+              </option>
+              {documents.map(doc => (
+                <option key={doc.id} value={doc.id} style={{ background: '#0B0F19' }}>
+                  {doc.title || doc.filename}
+                </option>
+              ))}
+            </select>
+            
+            <div className="mt-3 text-sm">
+              {!selectedDocId ? (
+                <span className="text-yellow-400/80">⚠️ Please select a regulation to begin</span>
+              ) : isLoadingDocument ? (
+                <span className="text-yellow-400/80">⏳ Loading document...</span>
+              ) : tocEntries.length > 0 ? (
+                <span className="text-green-400/90">✓ {tocEntries.length} sections ready</span>
+              ) : (
+                <span className="text-white/60">Loading table of contents...</span>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <div className="flex flex-col items-center gap-4 mb-4">
+              <button
+                className={`relative h-24 w-24 rounded-2xl ring-4 backdrop-blur active:scale-95 transition
+                  ${isListening ? 'ring-yellow-400 bg-yellow-400/10' : 'ring-yellow-400/70 bg-white/10 hover:bg-white/15'}`}
+                onClick={startVoice}
+                disabled={!selectedDocId || tocEntries.length === 0 || isLoadingDocument}
+                aria-label="Tap to talk"
+              >
+                <div className="flex items-center justify-center h-full relative">
+                  {isListening ? (
+                    <AudioBars active />
+                  ) : (
+                    <BoltIcon className="h-10 w-10" color="#FACC15" />
+                  )}
+                </div>
+              </button>
+
+              {voiceStatus && (
+                <div className="text-sm text-white/70 text-center">{voiceStatus}</div>
+              )}
+
+              {query && (
+                <div className="w-full p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="text-xs text-white/60 mb-1">You asked:</div>
+                  <div className="text-sm">{query}</div>
+                </div>
+              )}
+              
+              {currentSection && (
+                <div className="w-full p-4 rounded-xl bg-yellow-400/20 border-2 border-yellow-400/50">
+                  <div className="text-xs text-yellow-400/80 mb-1 font-medium">Found:</div>
+                  <div className="text-base font-semibold text-yellow-400">{currentSection.section_number}</div>
+                  <div className="text-sm text-white/90 mt-1">{currentSection.title}</div>
+                </div>
+              )}
+            </div>
+
+            {isListening && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Or type your question here..."
+                  className="flex-1 px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white text-base placeholder-white/40 outline-none focus:border-yellow-400/50"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      handleTextQuery(e.target.value.trim())
+                      e.target.value = ''
+                    }
+                  }}
+                />
+                <button
+                  onClick={(e) => {
+                    const input = e.target.previousElementSibling
+                    if (input.value.trim()) {
+                      handleTextQuery(input.value.trim())
+                      input.value = ''
+                    }
+                  }}
+                  className="px-6 py-4 bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-xl text-yellow-400 text-base font-medium transition"
+                >
+                  Ask
+                </button>
               </div>
             )}
           </div>
 
-          {isConnected && (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Or type your question here..."
-                className="flex-1 px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white text-base placeholder-white/40 outline-none focus:border-yellow-400/50"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && e.target.value.trim()) {
-                    handleTextQuery(e.target.value.trim())
-                    e.target.value = ''
-                  }
-                }}
-              />
-              <button
-                onClick={(e) => {
-                  const input = e.target.previousElementSibling
-                  if (input.value.trim()) {
-                    handleTextQuery(input.value.trim())
-                    input.value = ''
-                  }
-                }}
-                className="px-6 py-4 bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-xl text-yellow-400 text-base font-medium transition"
-              >
-                Ask
-              </button>
+          {error && (
+            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+              <div className="text-sm text-red-400">{error}</div>
             </div>
-          )}
-
-          {voiceStatus && (
-            <div className="text-sm text-white/70 text-center mt-3">{voiceStatus}</div>
           )}
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-            <div className="text-sm text-red-400">{error}</div>
-          </div>
+        {showViewer && pdfUrl && (
+          <PDFViewer
+            url={pdfUrl}
+            pageNumber={pageNumber}
+            onClose={() => {
+              setShowViewer(false)
+              setAlternativeMatches([])
+              setCurrentSection(null)
+            }}
+            onPageChange={setPageNumber}
+            alternativeMatches={alternativeMatches}
+            onAlternativeClick={(alt) => {
+              const altPage = parseInt(alt.page) + (pageOffsetRef.current || 0)
+              console.log(`📄 Navigating to alternative: ${alt.section_number} at page ${altPage}`)
+              setPageNumber(altPage)
+              setCurrentSection({
+                section_number: alt.section_number,
+                title: alt.title
+              })
+            }}
+            isListening={isListening}
+            voiceStatus={voiceStatus}
+            query={query}
+            onVoiceClick={startVoice}
+            onTextQuery={handleTextQuery}
+          />
         )}
       </div>
-
-      {showViewer && pdfUrl && (
-        <PDFViewer
-          url={pdfUrl}
-          pageNumber={pageNumber}
-          onClose={() => {
-            setShowViewer(false)
-            setAlternativeMatches([])
-            setCurrentSection(null)
-          }}
-          onPageChange={setPageNumber}
-          alternativeMatches={alternativeMatches}
-          onAlternativeClick={(alt) => {
-            const altPage = parseInt(alt.page) + (pageOffsetRef.current || 0)
-            console.log(`📄 Navigating to alternative: ${alt.section_number} at page ${altPage}`)
-            setPageNumber(altPage)
-            setCurrentSection({
-              section_number: alt.section_number,
-              title: alt.title
-            })
-          }}
-          isListening={isListening}
-          voiceStatus={voiceStatus}
-          query={query}
-          onVoiceClick={startVoice}
-          onTextQuery={handleTextQuery}
-       />
-      )}
-    </div>
-  </>
+    </>
   )
 }
