@@ -84,8 +84,16 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (selectedDocId) {
+      setShowViewer(false)
+      setCurrentSection(null)
+      setAlternativeMatches([])
+      setQuery('')
+      setPageNumber(1)
+      setPdfUrl(null)
+      pdfUrlRef.current = null
       selectedDocIdRef.current = selectedDocId
       setIsLoadingDocument(true)
+
       
       const selectedDoc = documents.find(d => d.id === selectedDocId)
       if (selectedDoc) {
@@ -413,7 +421,17 @@ Be concise and always call the function.`,
           setConversationState('ready')
           setVoiceStatus('Tap to ask again')
           clearProcessingTimeout()
-        }
+          // Now that the TTS stream is fully finished, stop the mic (keep DC/PC open)
+          if (localStreamRef.current) {
+            console.log('🎤 Stopping microphone after audio done')
+            localStreamRef.current.getTracks().forEach(track => track.stop())
+            localStreamRef.current = null
+            setIsListening(false)
+            setConversationState('idle')
+            setVoiceStatus('Tap to talk')
+          }
+         }
+        
 
         if (msg.type === 'response.function_call_arguments.done' && msg.name === 'find_section') {
           try {
@@ -577,17 +595,6 @@ Be concise and always call the function.`,
           console.log('✓ Response complete')
           clearProcessingTimeout()
           
-          // Auto-stop mic after response, but keep connection open
-          setTimeout(() => {
-            if (localStreamRef.current) {
-              console.log('🎤 Stopping microphone after response')
-              localStreamRef.current.getTracks().forEach(track => track.stop())
-              localStreamRef.current = null
-              setIsListening(false)
-              setConversationState('idle')
-            }
-            setVoiceStatus('Tap to talk')
-          }, 500)
         }
       }
 
@@ -702,7 +709,7 @@ Be concise and always call the function.`,
     <>
       {isInitialLoading && (
         <div className="fixed inset-0 bg-neutral-950 z-50 flex flex-col items-center justify-center gap-4">
-          <LogoRounded className="h-24 w-24 animate-pulse" />
+          <LogoRounded className="h-24 w-24" />
           <h1 className="text-2xl font-bold tracking-tight text-white">Regs</h1>
         </div>
       )}
@@ -746,6 +753,17 @@ Be concise and always call the function.`,
                 setSelectedDocId(newId)
                 selectedDocIdRef.current = newId
                 setVoiceStatus('Loading document...')
+                // Full reset when switching docs
+                stopVoice()
+                setShowViewer(false)
+                setCurrentSection(null)
+                setAlternativeMatches([])
+                setQuery('')
+                setPageNumber(1)
+                setPdfUrl(null)
+                pdfUrlRef.current = null
+                pendingQueriesRef.current = []
+                clearProcessingTimeout()
               }}
               className="w-full rounded-xl bg-white/10 hover:bg-white/15 px-4 py-3 outline-none text-white font-medium transition cursor-pointer border border-white/20"
               disabled={isLoadingDocument}
