@@ -72,8 +72,7 @@ export default function PDFViewer({
   const isPanning = useRef(false)
   const lastPanOffset = useRef({ x: 0, y: 0 })
 
-  const handleTextSubmit = (e) => {
-    e.preventDefault()
+  const handleTextSubmit = () => {
     if (textInput.trim() && onTextQuery) {
       onTextQuery(textInput.trim())
       setTextInput('')
@@ -401,19 +400,19 @@ export default function PDFViewer({
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex flex-col">
-      <div className="bg-white px-3 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 flex-shrink-0">
-        <div className="text-sm text-gray-600">
+      <div className="bg-black px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0 border-b border-white/10">
+        <div className="text-sm text-white/70">
           Page {pageNumber} {numPages ? `of ${numPages}` : ''} 
           {zoomLevel > 1 && ` · ${Math.round(zoomLevel * 100)}%`}
           {rendering && ' · Loading...'}
         </div>
         <div className="flex gap-2">
-          <button className="px-2 py-1 bg-gray-100 rounded text-sm" onClick={handleZoomOut}>−</button>
-          <button className="px-2 py-1 bg-gray-100 rounded text-sm" onClick={handleZoomIn}>+</button>
-          <button className="px-2 py-1 bg-gray-100 rounded text-sm" onClick={handleFitWidth}>Fit</button>
-          <button className="px-2 py-1 bg-gray-100 rounded text-sm" onClick={handlePrev}>◀</button>
-          <button className="px-2 py-1 bg-gray-100 rounded text-sm" onClick={handleNext}>▶</button>
-          <button className="px-2 py-1 bg-red-500 text-white rounded text-sm" onClick={onClose}>✕</button>
+          <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition" onClick={handleZoomOut}>−</button>
+          <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition" onClick={handleZoomIn}>+</button>
+          <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition" onClick={handleFitWidth}>Fit</button>
+          <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition" onClick={handlePrev}>◀</button>
+          <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition" onClick={handleNext}>▶</button>
+          <button className="px-4 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg font-medium transition" onClick={onClose}>✕</button>
         </div>
       </div>
 
@@ -436,22 +435,23 @@ export default function PDFViewer({
             </button>
 
             <div className="flex-1 min-w-0">
-              <form onSubmit={handleTextSubmit} className="flex gap-2">
+              <div className="flex gap-2">
                 <input
                   type="text"
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleTextSubmit()}
                   placeholder={query ? `Asked: "${query.substring(0, 30)}${query.length > 30 ? '...' : ''}"` : "Type your question or tap voice button..."}
                   className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm placeholder-white/40 outline-none focus:border-yellow-400/50"
                 />
                 <button
-                  type="submit"
+                  onClick={handleTextSubmit}
                   disabled={!textInput.trim()}
                   className="px-4 py-2 bg-yellow-400/20 hover:bg-yellow-400/30 disabled:bg-white/5 disabled:text-white/30 border border-yellow-400/30 rounded-lg text-yellow-400 text-sm font-medium transition"
                 >
                   Ask
                 </button>
-              </form>
+              </div>
               {voiceStatus && (
                 <div className="text-xs text-white/50 mt-1">{voiceStatus}</div>
               )}
