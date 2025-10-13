@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
@@ -72,6 +73,18 @@ export default function SearchPage() {
   const reconnectAttemptRef = useRef(0)
   const querySequenceRef = useRef(0)
   const pendingQueriesRef = useRef([])
+
+  const remoteAudioRef = useRef(null)
+
+useEffect(() => {
+  if (!remoteAudioRef.current) {
+    const a = new Audio()
+    a.autoplay = true
+    a.playsInline = true
+    remoteAudioRef.current = a
+  }
+}, [])
+
 
   useEffect(() => {
     loadDocuments()
@@ -197,8 +210,9 @@ export default function SearchPage() {
     if (isListening) {
       // Stop listening but keep connection open
       if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop())
-        localStreamRef.current = null
+        localStreamRef.current.getTracks().forEach(track => {
+          track.enabled = false  // Mute instead of stop
+        })
       }
       setIsListening(false)
       setVoiceStatus('Tap to talk')
@@ -228,6 +242,7 @@ export default function SearchPage() {
       // If already connected, just add the track
       if (pcRef.current && dcRef.current && dcRef.current.readyState === 'open') {
         const audioTrack = localStream.getAudioTracks()[0]
+        audioTrack.enabled = true  // Re-enable if it was muted
         const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'audio')
         if (sender) {
           await sender.replaceTrack(audioTrack)
@@ -269,12 +284,14 @@ export default function SearchPage() {
       }
 
       pc.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-          const audio = new Audio()
-          audio.srcObject = event.streams[0]
-          audio.autoplay = true
-        }
-      }
+  if (event.streams && event.streams[0] && remoteAudioRef.current) {
+    // optional tiny fade to further kill any click:
+    remoteAudioRef.current.volume = 0
+    remoteAudioRef.current.srcObject = event.streams[0]
+    setTimeout(() => { remoteAudioRef.current.volume = 1 }, 200)
+  }
+}
+
 
       const dc = pc.createDataChannel('oai-events')
       dcRef.current = dc
@@ -421,11 +438,12 @@ Be concise and always call the function.`,
           setConversationState('ready')
           setVoiceStatus('Tap to ask again')
           clearProcessingTimeout()
-          // Now that the TTS stream is fully finished, stop the mic (keep DC/PC open)
+          // Mute the microphone instead of stopping it (no beep)
           if (localStreamRef.current) {
-            console.log('🎤 Stopping microphone after audio done')
-            localStreamRef.current.getTracks().forEach(track => track.stop())
-            localStreamRef.current = null
+            console.log('🎤 Muting microphone after audio done')
+            localStreamRef.current.getAudioTracks().forEach(track => {
+              track.enabled = false
+            })
             setIsListening(false)
             setConversationState('idle')
             setVoiceStatus('Tap to talk')
@@ -483,9 +501,10 @@ Be concise and always call the function.`,
               setVoiceStatus('No match found')
               setTimeout(() => {
                 if (localStreamRef.current) {
-                  console.log('🎤 Stopping microphone after no match')
-                  localStreamRef.current.getTracks().forEach(track => track.stop())
-                  localStreamRef.current = null
+                  console.log('🎤 Muting microphone after no match')
+                  localStreamRef.current.getAudioTracks().forEach(track => {
+                    track.enabled = false
+                  })
                   setIsListening(false)
                   setVoiceStatus('Tap to talk')
                   setConversationState('idle')
@@ -573,9 +592,10 @@ Be concise and always call the function.`,
             
             setTimeout(() => {
               if (localStreamRef.current) {
-                console.log('🎤 Stopping microphone after PDF error')
-                localStreamRef.current.getTracks().forEach(track => track.stop())
-                localStreamRef.current = null
+                console.log('🎤 Muting microphone after PDF error')
+                localStreamRef.current.getAudioTracks().forEach(track => {
+                  track.enabled = false
+                })
                 setIsListening(false)
                 setVoiceStatus('Tap to talk')
                 setConversationState('idle')
@@ -706,6 +726,7 @@ Be concise and always call the function.`,
     : 'Select a regulation'
 
   return (
+
     <>
       {isInitialLoading && (
         <div className="fixed inset-0 bg-neutral-950 z-50 flex flex-col items-center justify-center gap-4">
