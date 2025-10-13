@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
@@ -76,15 +75,14 @@ export default function SearchPage() {
 
   const remoteAudioRef = useRef(null)
 
-useEffect(() => {
-  if (!remoteAudioRef.current) {
-    const a = new Audio()
-    a.autoplay = true
-    a.playsInline = true
-    remoteAudioRef.current = a
-  }
-}, [])
-
+  useEffect(() => {
+    if (!remoteAudioRef.current) {
+      const a = new Audio()
+      a.autoplay = true
+      a.playsInline = true
+      remoteAudioRef.current = a
+    }
+  }, [])
 
   useEffect(() => {
     loadDocuments()
@@ -107,7 +105,6 @@ useEffect(() => {
       selectedDocIdRef.current = selectedDocId
       setIsLoadingDocument(true)
 
-      
       const selectedDoc = documents.find(d => d.id === selectedDocId)
       if (selectedDoc) {
         const offset = selectedDoc.pdf_page_offset || 0
@@ -141,8 +138,6 @@ useEffect(() => {
       
       setDocuments(data.documents || [])
       documentsRef.current = data.documents || []
-      
-      // Don't auto-select a document - make user choose
     } catch (error) {
       console.error('Error loading documents:', error)
       setError(`Failed to load documents: ${error.message}`)
@@ -168,6 +163,7 @@ useEffect(() => {
       if (data.error) throw new Error(data.error)
       
       setTocEntries(data.toc || [])
+      console.log(`✅ Loaded ${data.toc?.length || 0} TOC entries for document ${docId}`)
     } catch (error) {
       console.error('Error loading TOC:', error)
       setError(`Failed to load table of contents: ${error.message}`)
@@ -284,14 +280,12 @@ useEffect(() => {
       }
 
       pc.ontrack = (event) => {
-  if (event.streams && event.streams[0] && remoteAudioRef.current) {
-    // optional tiny fade to further kill any click:
-    remoteAudioRef.current.volume = 0
-    remoteAudioRef.current.srcObject = event.streams[0]
-    setTimeout(() => { remoteAudioRef.current.volume = 1 }, 200)
-  }
-}
-
+        if (event.streams && event.streams[0] && remoteAudioRef.current) {
+          remoteAudioRef.current.volume = 0
+          remoteAudioRef.current.srcObject = event.streams[0]
+          setTimeout(() => { remoteAudioRef.current.volume = 1 }, 200)
+        }
+      }
 
       const dc = pc.createDataChannel('oai-events')
       dcRef.current = dc
@@ -310,6 +304,7 @@ useEffect(() => {
         setIsConnected(true)
         setConversationState('ready')
 
+        // NEW: Lightweight session config - no TOC embedded!
         const sessionConfig = {
           type: 'session.update',
           session: {
@@ -324,50 +319,52 @@ useEffect(() => {
               prefix_padding_ms: 300,
               silence_duration_ms: 1200
             },
-            instructions: `You are a PDF search assistant for electricians. When asked a question, you MUST ALWAYS call the find_section function - never just talk about the regulation.
+            instructions: `You are a PDF search assistant for electrical regulations.
 
-Here is the table of contents:
+When the user asks a question:
+1. FIRST call search_toc with their query to find relevant sections
+2. THEN call find_section with the best match from the search results
+3. Be concise and helpful
 
-${tocEntries.map(e => `${e.section_number}: ${e.title} (Page ${e.document_page || e.page})`).join('\n')}
-
-CRITICAL: When searching for sections:
-- Match the EXACT section number if possible (e.g., "Table 5.1" matches "Table 5.1", NOT "5.1")
-- "Table X.Y" is different from "Section X.Y" or just "X.Y"
-- Look for the full section number including prefixes like "Table", "Figure", "Appendix"
-
-Your job:
-1. Find the BEST matching section from the TOC above
-2. Include up to 3 alternatives that are also relevant
-3. ALWAYS call find_section (required - do not talk about it)
-
-If nothing matches:
-- Use section_number "NO_MATCH"
-- Say: "I couldn't find that in this regulation."
-
-Be concise and always call the function.`,
+If no matches found, say: "I couldn't find that in this regulation."`,
             tools: [
               {
                 type: 'function',
+                name: 'search_toc',
+                description: 'Search the table of contents for relevant sections, tables, figures, or clauses',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    query: {
+                      type: 'string',
+                      description: 'The user\'s search query - extract key terms like section numbers, topics, or keywords'
+                    }
+                  },
+                  required: ['query']
+                }
+              },
+              {
+                type: 'function',
                 name: 'find_section',
-                description: 'Navigate PDF to specific clause, table, or section in electrical regulations',
+                description: 'Navigate PDF to a specific section after searching',
                 parameters: {
                   type: 'object',
                   properties: {
                     section_number: { 
                       type: 'string',
-                      description: 'Best match section number from TOC (could be clause, table, appendix, etc.), or "NO_MATCH" if nothing found'
+                      description: 'Section number from search results, or "NO_MATCH" if nothing found'
                     },
                     title: { 
                       type: 'string',
-                      description: 'Best match title from TOC, or empty if NO_MATCH'
+                      description: 'Section title from search results, or empty if NO_MATCH'
                     },
                     page: { 
                       type: 'number',
-                      description: 'Best match page number from TOC, or 0 if NO_MATCH'
+                      description: 'Page number from search results, or 0 if NO_MATCH'
                     },
                     alternatives: {
                       type: 'array',
-                      description: 'Up to 3 alternative matches if they would also help answer the question',
+                      description: 'Up to 3 alternative matches from search results',
                       items: {
                         type: 'object',
                         properties: {
@@ -410,8 +407,7 @@ Be concise and always call the function.`,
             })
             
             console.log(`📋 Query #${seq} logged: "${msg.transcript}"`)
-            
-           }
+          }
         }
 
         if (msg.type === 'input_audio_buffer.speech_started') {
@@ -438,7 +434,6 @@ Be concise and always call the function.`,
           setConversationState('ready')
           setVoiceStatus('Tap to ask again')
           clearProcessingTimeout()
-          // Mute the microphone instead of stopping it (no beep)
           if (localStreamRef.current) {
             console.log('🎤 Muting microphone after audio done')
             localStreamRef.current.getAudioTracks().forEach(track => {
@@ -448,8 +443,62 @@ Be concise and always call the function.`,
             setConversationState('idle')
             setVoiceStatus('Tap to talk')
           }
-         }
-        
+        }
+
+        // NEW: Handle search_toc function call
+        if (msg.type === 'response.function_call_arguments.done' && msg.name === 'search_toc') {
+          try {
+            const args = JSON.parse(msg.arguments)
+            console.log('🔍 Searching TOC for:', args.query)
+            
+            setVoiceStatus('Searching document...')
+            
+            // Call search endpoint
+            const response = await fetch('/api/search-toc', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                documentId: selectedDocIdRef.current,
+                query: args.query
+              })
+            })
+            
+            const { results } = await response.json()
+            
+            console.log(`✅ Found ${results?.length || 0} matches`)
+            
+            // Format results for AI
+            const formattedResults = results && results.length > 0
+              ? results.map(r => 
+                  `${r.section_number}: ${r.title} (Page ${r.document_page || r.page})`
+                ).join('\n')
+              : 'No matches found'
+            
+            // Send results back to AI
+            dc.send(JSON.stringify({
+              type: 'conversation.item.create',
+              item: {
+                type: 'function_call_output',
+                call_id: msg.call_id,
+                output: formattedResults
+              }
+            }))
+            
+            dc.send(JSON.stringify({ type: 'response.create' }))
+            
+          } catch (e) {
+            console.error('❌ Search error:', e)
+            dc.send(JSON.stringify({
+              type: 'conversation.item.create',
+              item: {
+                type: 'function_call_output',
+                call_id: msg.call_id,
+                output: 'Search error - please try again'
+              }
+            }))
+            dc.send(JSON.stringify({ type: 'response.create' }))
+          }
+        }
 
         if (msg.type === 'response.function_call_arguments.done' && msg.name === 'find_section') {
           try {
@@ -458,20 +507,20 @@ Be concise and always call the function.`,
             
             const pendingQuery = pendingQueriesRef.current.shift()
             if (pendingQuery) {
-               console.log(`✅ Logging complete query for #${pendingQuery.seq}: "${pendingQuery.text}"`)
+              console.log(`✅ Logging complete query for #${pendingQuery.seq}: "${pendingQuery.text}"`)
   
-               logQuery({
-                 query_id: pendingQuery.queryId,
-                 query_text: pendingQuery.text,
-                 query_type: 'voice',
-                 document_id: selectedDocIdRef.current,
-                 timestamp: new Date().toISOString(),
-                 result_section: args.section_number,
-                 result_title: args.title || '',
-                 result_page: args.page || 0,
-                 result_found: args.section_number !== 'NO_MATCH',
-                 alternatives_count: args.alternatives?.length || 0
-               })
+              logQuery({
+                query_id: pendingQuery.queryId,
+                query_text: pendingQuery.text,
+                query_type: 'voice',
+                document_id: selectedDocIdRef.current,
+                timestamp: new Date().toISOString(),
+                result_section: args.section_number,
+                result_title: args.title || '',
+                result_page: args.page || 0,
+                result_found: args.section_number !== 'NO_MATCH',
+                alternatives_count: args.alternatives?.length || 0
+              })
             } else {
               console.warn('⚠️ No pending query found for result')
             }
@@ -614,7 +663,6 @@ Be concise and always call the function.`,
         if (msg.type === 'response.done') {
           console.log('✓ Response complete')
           clearProcessingTimeout()
-          
         }
       }
 
@@ -726,7 +774,6 @@ Be concise and always call the function.`,
     : 'Select a regulation'
 
   return (
-
     <>
       {isInitialLoading && (
         <div className="fixed inset-0 bg-neutral-950 z-50 flex flex-col items-center justify-center gap-4">
