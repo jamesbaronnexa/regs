@@ -158,6 +158,13 @@ export default function SearchPage() {
   const loadTocForDocument = async (docId) => {
     try {
       const response = await fetch(`/api/get-toc?documentId=${docId}`)
+      
+      if (!response.ok) {
+        const text = await response.text()
+        console.error('API response not OK:', response.status, text)
+        throw new Error(`API error: ${response.status} - ${text}`)
+      }
+      
       const data = await response.json()
       
       if (data.error) throw new Error(data.error)
@@ -204,10 +211,9 @@ export default function SearchPage() {
 
   const startVoice = async () => {
     if (isListening) {
-      // Stop listening but keep connection open
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(track => {
-          track.enabled = false  // Mute instead of stop
+          track.enabled = false
         })
       }
       setIsListening(false)
@@ -235,10 +241,9 @@ export default function SearchPage() {
       })
       localStreamRef.current = localStream
 
-      // If already connected, just add the track
       if (pcRef.current && dcRef.current && dcRef.current.readyState === 'open') {
         const audioTrack = localStream.getAudioTracks()[0]
-        audioTrack.enabled = true  // Re-enable if it was muted
+        audioTrack.enabled = true
         const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'audio')
         if (sender) {
           await sender.replaceTrack(audioTrack)
@@ -250,7 +255,6 @@ export default function SearchPage() {
         return
       }
 
-      // Otherwise start new connection
       await startConnection(localStream)
       setVoiceStatus('Listening - just speak!')
       setConversationState('ready')
@@ -304,7 +308,6 @@ export default function SearchPage() {
         setIsConnected(true)
         setConversationState('ready')
 
-        // NEW: Lightweight session config - no TOC embedded!
         const sessionConfig = {
           type: 'session.update',
           session: {
@@ -319,14 +322,18 @@ export default function SearchPage() {
               prefix_padding_ms: 300,
               silence_duration_ms: 1200
             },
-            instructions: `You are a PDF search assistant for electrical regulations.
+            instructions: `You are a PDF search assistant for regulations.
 
 When the user asks a question:
 1. FIRST call search_toc with their query to find relevant sections
-2. THEN call find_section with the best match from the search results
-3. Be concise and helpful
+2. THEN call find_section with the BEST match from the search results
 
-If no matches found, say: "I couldn't find that in this regulation."`,
+IMPORTANT RULES:
+- If the query is about a DIFFERENT topic than the last result, ALWAYS do a fresh search
+- If the query is a FOLLOW-UP question (like "what's the maximum?" or "tell me more"), you can reference the current section
+- When in doubt, do a fresh search - it's fast!
+
+Be concise and helpful. If no matches found, say: "I couldn't find that in this regulation."`,
             tools: [
               {
                 type: 'function',
@@ -361,18 +368,6 @@ If no matches found, say: "I couldn't find that in this regulation."`,
                     page: { 
                       type: 'number',
                       description: 'Page number from search results, or 0 if NO_MATCH'
-                    },
-                    alternatives: {
-                      type: 'array',
-                      description: 'Up to 3 alternative matches from search results',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          section_number: { type: 'string' },
-                          title: { type: 'string' },
-                          page: { type: 'number' }
-                        }
-                      }
                     }
                   },
                   required: ['section_number', 'title', 'page']
@@ -418,6 +413,10 @@ If no matches found, say: "I couldn't find that in this regulation."`,
           setConversationState('listening')
           setError(null)
           clearProcessingTimeout()
+          
+          if (dcRef.current && dcRef.current.readyState === 'open') {
+            console.log('🧹 Resetting context for new query')
+          }
         }
 
         if (msg.type === 'input_audio_buffer.speech_stopped') {
@@ -445,7 +444,7 @@ If no matches found, say: "I couldn't find that in this regulation."`,
           }
         }
 
-        // NEW: Handle search_toc function call
+        // Handle search_toc function call
         if (msg.type === 'response.function_call_arguments.done' && msg.name === 'search_toc') {
           try {
             const args = JSON.parse(msg.arguments)
@@ -453,7 +452,6 @@ If no matches found, say: "I couldn't find that in this regulation."`,
             
             setVoiceStatus('Searching document...')
             
-            // Call search endpoint
             const response = await fetch('/api/search-toc', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -463,18 +461,24 @@ If no matches found, say: "I couldn't find that in this regulation."`,
               })
             })
             
-            const { results } = await response.json()
+            const { results, topAlternatives } = await response.json()
             
             console.log(`✅ Found ${results?.length || 0} matches`)
             
-            // Format results for AI
+            // Store alternatives for find_section to use
+            if (topAlternatives && topAlternatives.length > 0) {
+              window._lastSearchAlternatives = topAlternatives
+              console.log('📚 Stored alternatives:', topAlternatives)
+            } else {
+              window._lastSearchAlternatives = []
+            }
+            
             const formattedResults = results && results.length > 0
               ? results.map(r => 
                   `${r.section_number}: ${r.title} (Page ${r.document_page || r.page})`
                 ).join('\n')
               : 'No matches found'
             
-            // Send results back to AI
             dc.send(JSON.stringify({
               type: 'conversation.item.create',
               item: {
@@ -488,6 +492,7 @@ If no matches found, say: "I couldn't find that in this regulation."`,
             
           } catch (e) {
             console.error('❌ Search error:', e)
+            window._lastSearchAlternatives = []
             dc.send(JSON.stringify({
               type: 'conversation.item.create',
               item: {
@@ -503,7 +508,7 @@ If no matches found, say: "I couldn't find that in this regulation."`,
         if (msg.type === 'response.function_call_arguments.done' && msg.name === 'find_section') {
           try {
             const args = JSON.parse(msg.arguments)
-            console.log('🔍 Function called with:', args)
+            console.log('📖 Function called with:', args)
             
             const pendingQuery = pendingQueriesRef.current.shift()
             if (pendingQuery) {
@@ -519,7 +524,7 @@ If no matches found, say: "I couldn't find that in this regulation."`,
                 result_title: args.title || '',
                 result_page: args.page || 0,
                 result_found: args.section_number !== 'NO_MATCH',
-                alternatives_count: args.alternatives?.length || 0
+                alternatives_count: (args.alternatives || window._lastSearchAlternatives || []).length
               })
             } else {
               console.warn('⚠️ No pending query found for result')
@@ -569,10 +574,14 @@ If no matches found, say: "I couldn't find that in this regulation."`,
               throw new Error('Invalid page number')
             }
             
-            if (args.alternatives && args.alternatives.length > 0) {
-              console.log('📚 Found', args.alternatives.length, 'alternative matches')
-              setAlternativeMatches(args.alternatives)
+            // Use alternatives from AI OR from stored search results
+            const alternatives = args.alternatives || window._lastSearchAlternatives || []
+            
+            if (alternatives && alternatives.length > 0) {
+              console.log('📚 Showing', alternatives.length, 'alternative matches')
+              setAlternativeMatches(alternatives)
             } else {
+              console.log('ℹ️ No alternatives available')
               setAlternativeMatches([])
             }
             
@@ -622,6 +631,9 @@ If no matches found, say: "I couldn't find that in this regulation."`,
                 instructions: `Say: "Look at ${args.section_number}" - nothing else.`
               }
             }))
+            
+            // Clear stored alternatives after use
+            window._lastSearchAlternatives = []
             
           } catch (e) {
             console.error('❌ PDF Error:', e)
@@ -766,7 +778,6 @@ If no matches found, say: "I couldn't find that in this regulation."`,
     clearProcessingTimeout()
   }, [])
 
-  // Get current document title
   const currentDocTitle = selectedDocId 
     ? (documents.find(d => d.id === selectedDocId)?.title || 
        documents.find(d => d.id === selectedDocId)?.filename || 
@@ -821,7 +832,6 @@ If no matches found, say: "I couldn't find that in this regulation."`,
                 setSelectedDocId(newId)
                 selectedDocIdRef.current = newId
                 setVoiceStatus('Loading document...')
-                // Full reset when switching docs
                 stopVoice()
                 setShowViewer(false)
                 setCurrentSection(null)
