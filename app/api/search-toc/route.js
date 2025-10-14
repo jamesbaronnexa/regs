@@ -1,13 +1,26 @@
 // /app/api/search-toc/route.js
-// THIS IS THE NEW SEARCH ENDPOINT - Create this as a NEW file!
-
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import OpenAI from 'openai'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+})
+
+// Calculate cosine similarity between two vectors
+function cosineSimilarity(vecA, vecB) {
+  if (!vecA || !vecB || vecA.length !== vecB.length) return 0
+  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0)
+  const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0))
+  const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0))
+  if (magnitudeA === 0 || magnitudeB === 0) return 0
+  return dotProduct / (magnitudeA * magnitudeB)
+}
 
 export async function POST(request) {
   try {
@@ -17,209 +30,208 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Document ID and query required' }, { status: 400 })
     }
     
-    console.log(`🔍 Searching doc ${documentId} for: "${query}"`)
+    console.log(`🔍 Hybrid search on doc ${documentId} for: "${query}"`)
     
-    // Fetch ALL TOC entries for this document
-    const { data, error } = await supabase
-      .from('toc')
-      .select('*')
-      .eq('document_id', documentId)
-      .order('document_page')
+    // Step 1: Fetch TOC entries using raw SQL to properly get vector data
+    const { data, error } = await supabase.rpc('get_toc_with_embeddings', {
+      doc_id: documentId
+    })
     
-    if (error) {
-      console.error('Supabase error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    // Fallback: If RPC doesn't exist, create it or use direct query
+    let tocData = data
+    if (error || !data) {
+      console.log('⚠️ RPC not found, using direct query...')
+      
+      // Direct SQL query that converts vector to array
+      const { data: rawData, error: rawError } = await supabase
+        .from('toc')
+        .select('id, document_id, section_number, title, document_page, level, entry_type, parent_section, full_path, embedding::text')
+        .eq('document_id', documentId)
+        .order('document_page')
+      
+      if (rawError) {
+        console.error('Supabase error:', rawError)
+        return NextResponse.json({ error: rawError.message }, { status: 500 })
+      }
+      
+      // Parse the text representation of vectors back to arrays
+      tocData = rawData.map(row => {
+        if (row.embedding && typeof row.embedding === 'string') {
+          // Parse "[0.1, 0.2, 0.3, ...]" format
+          try {
+            const cleaned = row.embedding.replace(/[\[\]]/g, '')
+            row.embedding = cleaned.split(',').map(v => parseFloat(v.trim()))
+          } catch (e) {
+            console.error('Failed to parse embedding for', row.id)
+            row.embedding = null
+          }
+        }
+        return row
+      })
     }
     
-    if (!data || data.length === 0) {
+    if (!tocData || tocData.length === 0) {
       return NextResponse.json({ results: [] })
     }
     
-    // Normalize query for matching
+    // Step 2: Check if embeddings exist
+    const entriesWithEmbeddings = tocData.filter(e => e.embedding && Array.isArray(e.embedding) && e.embedding.length > 0)
+    const hasEmbeddings = entriesWithEmbeddings.length > 0
+    
+    console.log(`📊 TOC entries: ${tocData.length}, With embeddings: ${entriesWithEmbeddings.length}`)
+    
+    // Step 3: Generate query embedding only if we have embeddings in DB
+    let queryEmbedding = null
+    if (hasEmbeddings) {
+      try {
+        const embeddingResponse = await openai.embeddings.create({
+          model: "text-embedding-3-small",
+          input: query
+        })
+        queryEmbedding = embeddingResponse.data[0].embedding
+        console.log(`✅ Generated query embedding (${queryEmbedding.length} dimensions)`)
+      } catch (embError) {
+        console.error('⚠️ Failed to generate embedding:', embError.message)
+      }
+    } else {
+      console.log('⚠️ No embeddings found in TOC - using keyword-only search')
+    }
+    
+    // Step 4: Calculate scores
     const queryLower = query.toLowerCase().trim()
-    const searchTerms = queryLower.split(/\s+/).filter(t => t.length > 1) // Min 2 chars
+    const searchTerms = queryLower.split(/\s+/).filter(t => t.length > 1)
     
-    // Extract key concepts from query (generic terms that work for all documents)
-    const hasTable = /table/i.test(query)
-    const hasFigure = /figure/i.test(query)
-    const hasAppendix = /appendix/i.test(query)
-    const hasSize = /size|dimension|span|length|width|height|spacing|distance/i.test(query)
-    const hasRequirement = /require|minimum|maximum|min|max/i.test(query)
+    // Remove common stop words
+    const stopWords = ['the', 'and', 'for', 'with', 'from', 'what', 'how', 'where', 
+                       'when', 'is', 'a', 'an', 'to', 'in', 'on', 'at', 'of', 'or', 'between']
+    const keywords = searchTerms.filter(t => !stopWords.includes(t))
     
-    // Extract numbers (section refs, dimensions, etc)
-    const queryNumbers = queryLower.match(/\d+(\.\d+)*/g)
+    console.log(`🔑 Keywords: ${keywords.join(', ')}`)
     
-    // Detect if asking for specifications/sizing (wants tables, not figures)
-    const wantsSpecifications = hasSize || hasRequirement || /what|how much|how many/i.test(query)
-    
-    // Score each TOC entry
-    const scored = data.map(entry => {
+    const scored = tocData.map(entry => {
       const sectionLower = (entry.section_number || '').toLowerCase()
       const titleLower = (entry.title || '').toLowerCase()
-      const combinedText = `${sectionLower} ${titleLower}`
+      const fullPathLower = (entry.full_path || '').toLowerCase()
       
-      let score = 0
-      let matchDetails = []
+      // KEYWORD SCORING
+      let keywordScore = 0
       
-      // === PRIORITY 1: EXACT MATCHES ===
-      
-      // Exact section number match (highest priority)
+      // 1. Exact section number match
       if (sectionLower === queryLower) {
-        score += 500
-        matchDetails.push('exact section')
+        keywordScore += 1000
       }
       
-      // Section number contains exact query
+      // 2. Section number contains query
       if (sectionLower.includes(queryLower)) {
-        score += 200
-        matchDetails.push('section contains query')
+        keywordScore += 500
       }
       
-      // Section number starts with query
-      if (sectionLower.startsWith(queryLower)) {
-        score += 150
-        matchDetails.push('section starts')
-      }
-      
-      // === PRIORITY 2: CONTENT TYPE PREFERENCES ===
-      
-      // When asking for specifications, prioritize tables over figures
-      if (wantsSpecifications) {
-        if (sectionLower.startsWith('table')) {
-          score += 150
-          matchDetails.push('table for specs')
-        }
-        if (sectionLower.startsWith('figure')) {
-          score -= 30
-          matchDetails.push('figure penalty')
-        }
-      }
-      
-      // Direct table/figure mention in query
-      if (hasTable && sectionLower.includes('table')) {
-        score += 120
-        matchDetails.push('table match')
-      }
-      if (hasFigure && sectionLower.includes('figure')) {
-        score += 120
-        matchDetails.push('figure match')
-      }
-      if (hasAppendix && sectionLower.includes('appendix')) {
-        score += 120
-        matchDetails.push('appendix match')
-      }
-      
-      // === PRIORITY 3: TITLE MATCHING ===
-      
-      // Exact full phrase in title
+      // 3. Title contains full query phrase
       if (titleLower.includes(queryLower)) {
-        score += 180
-        matchDetails.push('exact phrase in title')
+        keywordScore += 300
       }
       
-      // All meaningful terms present in title
-      const stopWords = ['the', 'and', 'for', 'with', 'from', 'what', 'how', 'where', 
-                         'when', 'is', 'a', 'an', 'to', 'in', 'on', 'at', 'of', 'or']
-      const meaningfulTerms = searchTerms.filter(t => !stopWords.includes(t))
-      
-      const allTermsInTitle = meaningfulTerms.every(term => 
-        titleLower.includes(term) || sectionLower.includes(term)
-      )
-      if (allTermsInTitle && meaningfulTerms.length >= 2) {
-        score += 100
-        matchDetails.push(`all ${meaningfulTerms.length} terms`)
+      // 4. Full path contains query
+      if (fullPathLower.includes(queryLower)) {
+        keywordScore += 200
       }
       
-      // === PRIORITY 4: KEYWORD MATCHING ===
-      
-      let titleKeywordCount = 0
-      let sectionKeywordCount = 0
-      
-      meaningfulTerms.forEach(term => {
-        // Title contains term
-        if (titleLower.includes(term)) {
-          score += 25
-          titleKeywordCount++
+      // 5. Count keyword matches
+      let keywordMatches = 0
+      keywords.forEach(keyword => {
+        if (titleLower.includes(keyword)) {
+          keywordScore += 50
+          keywordMatches++
         }
-        
-        // Section number contains term
-        if (sectionLower.includes(term)) {
-          score += 30
-          sectionKeywordCount++
+        if (sectionLower.includes(keyword)) {
+          keywordScore += 30
         }
-        
-        // Word boundary match (whole word)
-        const wordRegex = new RegExp(`\\b${term}\\b`, 'i')
-        if (wordRegex.test(titleLower)) {
-          score += 15
+        if (fullPathLower.includes(keyword)) {
+          keywordScore += 20
         }
       })
       
-      // Bonus for multiple matches
-      if (titleKeywordCount >= 2) {
-        score += titleKeywordCount * 10
-        matchDetails.push(`${titleKeywordCount} title keywords`)
+      // 6. Bonus if most keywords match
+      if (keywordMatches >= keywords.length * 0.5 && keywords.length > 1) {
+        keywordScore += 100
       }
       
-      // === PRIORITY 5: NUMBER MATCHING ===
+      // Normalize keyword score to 0-1
+      const normalizedKeywordScore = Math.min(keywordScore / 1500, 1)
       
-      const sectionNumbers = sectionLower.match(/\d+(\.\d+)*/g)
-      
-      if (queryNumbers && sectionNumbers) {
-        queryNumbers.forEach(qNum => {
-          sectionNumbers.forEach(sNum => {
-            if (sNum === qNum) {
-              score += 40
-              matchDetails.push(`number ${qNum}`)
-            } else if (sNum.startsWith(qNum + '.')) {
-              score += 25
-              matchDetails.push(`subsection ${qNum}`)
-            }
-          })
-        })
+      // SEMANTIC SCORING
+      let semanticScore = 0
+      if (queryEmbedding && entry.embedding && Array.isArray(entry.embedding)) {
+        const similarity = cosineSimilarity(queryEmbedding, entry.embedding)
+        // Cosine similarity returns -1 to 1, normalize to 0-1
+        semanticScore = Math.max(0, (similarity + 1) / 2)
       }
       
-      // === PRIORITY 6: SEMANTIC GROUPING ===
-      
-      // Boost sections in the same "family" (e.g., all 7.x sections for floor queries)
-      if (meaningfulTerms.length > 0) {
-        const firstTerm = meaningfulTerms[0]
-        // Count how many times the first meaningful term appears
-        const termCount = (titleLower.match(new RegExp(firstTerm, 'g')) || []).length
-        if (termCount > 1) {
-          score += termCount * 5
-        }
+      // HYBRID SCORE
+      let finalScore
+      if (hasEmbeddings && queryEmbedding) {
+        // Use hybrid if embeddings available
+        finalScore = (normalizedKeywordScore * 0.3) + (semanticScore * 0.7)
+      } else {
+        // Fall back to keyword-only
+        finalScore = normalizedKeywordScore
       }
       
       return { 
         ...entry, 
-        score,
-        _matchDetails: matchDetails.join(', ')
+        score: finalScore * 1000,
+        keywordScore: normalizedKeywordScore * 1000,
+        semanticScore: semanticScore * 1000,
+        _matchCount: keywordMatches,
+        _keywords: keywords.length
       }
     })
     
-    // Filter and sort results
+    // Filter and sort
     const results = scored
-      .filter(e => e.score > 0)
+      .filter(e => e.score > 10) // Minimum threshold
       .sort((a, b) => {
-        // Sort by score first
         if (b.score !== a.score) return b.score - a.score
-        // Then by page number (earlier pages first)
         return (a.document_page || a.page || 0) - (b.document_page || b.page || 0)
       })
-      .slice(0, 20) // Top 20 results
+      .slice(0, 20)
     
-    console.log(`✅ Found ${results.length} matches (from ${data.length} entries)`)
+    console.log(`✅ Found ${results.length} matches (from ${tocData.length} entries)`)
     
     if (results.length > 0) {
-      console.log(`📌 Top 3 matches:`)
-      results.slice(0, 3).forEach((r, i) => {
-        console.log(`  ${i+1}. ${r.section_number} - ${r.title}`)
-        console.log(`     Score: ${r.score} | Matches: ${r._matchDetails}`)
+      console.log(`📌 Top 5 matches:`)
+      results.slice(0, 5).forEach((r, i) => {
+        console.log(`  ${i+1}. [${r.score.toFixed(0)}] ${r.section_number}: ${r.title}`)
+        if (hasEmbeddings && queryEmbedding) {
+          console.log(`     (K:${r.keywordScore.toFixed(0)} S:${r.semanticScore.toFixed(0)} M:${r._matchCount}/${r._keywords})`)
+        } else {
+          console.log(`     (K:${r.keywordScore.toFixed(0)} M:${r._matchCount}/${r._keywords})`)
+        }
+      })
+    } else {
+      // Debug: Show top 5 by raw score anyway
+      const top5 = scored.sort((a, b) => b.score - a.score).slice(0, 5)
+      console.log(`⚠️ No matches above threshold. Top 5 scores:`)
+      top5.forEach((r, i) => {
+        console.log(`  ${i+1}. [${r.score.toFixed(2)}] ${r.section_number}: ${r.title}`)
       })
     }
     
-    return NextResponse.json({ results })
+    return NextResponse.json({ 
+      results,
+      // Include top alternatives for the frontend
+      topAlternatives: results.slice(1, 4).map(r => ({
+        section_number: r.section_number,
+        title: r.title,
+        page: r.document_page
+      })),
+      debug: {
+        totalEntries: tocData.length,
+        hasEmbeddings,
+        entriesWithEmbeddings: entriesWithEmbeddings.length,
+        keywordsExtracted: keywords.length
+      }
+    })
   } catch (error) {
     console.error('Search error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
