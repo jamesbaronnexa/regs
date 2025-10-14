@@ -319,8 +319,8 @@ export default function SearchPage() {
             turn_detection: {
               type: 'server_vad',
               threshold: 0.5,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 1200
+              prefix_padding_ms: 500,  // Increased from 300ms - captures more audio before speech
+              silence_duration_ms: 1000  // Reduced from 1200ms - faster cutoff after you stop
             },
             instructions: `You are a PDF search assistant for regulations.
 
@@ -414,9 +414,10 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
           setError(null)
           clearProcessingTimeout()
           
-          if (dcRef.current && dcRef.current.readyState === 'open') {
-            console.log('🧹 Resetting context for new query')
-          }
+          // Clear stored alternatives for fresh search
+          window._lastSearchAlternatives = []
+          
+          console.log('🧹 New query detected - clearing previous context')
         }
 
         if (msg.type === 'input_audio_buffer.speech_stopped') {
@@ -628,7 +629,7 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
               type: 'response.create',
               response: {
                 modalities: ['audio', 'text'],
-                instructions: `Say: "Look at ${args.section_number}" - nothing else.`
+                instructions: `The PDF is now showing ${args.section_number}: ${args.title}. Say ONLY "Look at ${args.section_number}" - use the NEW section number I just gave you, not any previous one.`
               }
             }))
             
