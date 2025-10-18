@@ -17,6 +17,34 @@ const LogoRounded = ({ className = '', corner = 6 }) => (
   </svg>
 )
 
+const Spinner = ({ className = '', color = '#FACC15' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <circle 
+      cx="12" 
+      cy="12" 
+      r="10" 
+      stroke={color} 
+      strokeWidth="3" 
+      strokeLinecap="round"
+      strokeDasharray="60"
+      strokeDashoffset="40"
+      opacity="0.25"
+    />
+    <circle 
+      cx="12" 
+      cy="12" 
+      r="10" 
+      stroke={color} 
+      strokeWidth="3" 
+      strokeLinecap="round"
+      strokeDasharray="60"
+      strokeDashoffset="40"
+      className="animate-spin origin-center"
+      style={{ animationDuration: '1s' }}
+    />
+  </svg>
+)
+
 const AudioBars = ({ active = false }) => {
   if (!active) return null
   return (
@@ -37,6 +65,36 @@ const AudioBars = ({ active = false }) => {
 }
 
 export default function SearchPage() {
+  // Disable zoom and page movement on mobile
+  useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]')
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
+    } else {
+      const meta = document.createElement('meta')
+      meta.name = 'viewport'
+      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+      document.head.appendChild(meta)
+    }
+    
+    // Prevent double-tap zoom
+    let lastTouchEnd = 0
+    const preventZoom = (e) => {
+      const now = Date.now()
+      if (now - lastTouchEnd <= 300) {
+        e.preventDefault()
+      }
+      lastTouchEnd = now
+    }
+    
+    document.addEventListener('touchend', preventZoom, { passive: false })
+    
+    return () => {
+      document.removeEventListener('touchend', preventZoom)
+    }
+  }, [])
+  
+
   // Core state
   const [isListening, setIsListening] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
@@ -230,6 +288,7 @@ export default function SearchPage() {
     try {
       setIsListening(true)
       setVoiceStatus('Getting microphone...')
+      setConversationState('connecting')
       setError(null)
 
       const localStream = await navigator.mediaDevices.getUserMedia({
@@ -271,7 +330,7 @@ export default function SearchPage() {
   const startConnection = async (localStream = null) => {
     try {
       setVoiceStatus('Connecting...')
-      setConversationState('idle')
+      setConversationState('connecting')
 
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -319,8 +378,8 @@ export default function SearchPage() {
             turn_detection: {
               type: 'server_vad',
               threshold: 0.5,
-              prefix_padding_ms: 500,  // Increased from 300ms - captures more audio before speech
-              silence_duration_ms: 1000  // Reduced from 1200ms - faster cutoff after you stop
+              prefix_padding_ms: 500,
+              silence_duration_ms: 1000
             },
             instructions: `You are a PDF search assistant for regulations.
 
@@ -414,7 +473,6 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
           setError(null)
           clearProcessingTimeout()
           
-          // Clear stored alternatives for fresh search
           window._lastSearchAlternatives = []
           
           console.log('🧹 New query detected - clearing previous context')
@@ -422,6 +480,7 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
 
         if (msg.type === 'input_audio_buffer.speech_stopped') {
           setVoiceStatus('Processing...')
+          setConversationState('processing')
         }
 
         if (msg.type === 'response.audio.delta' || msg.type === 'response.audio_transcript.delta') {
@@ -445,7 +504,6 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
           }
         }
 
-        // Handle search_toc function call
         if (msg.type === 'response.function_call_arguments.done' && msg.name === 'search_toc') {
           try {
             const args = JSON.parse(msg.arguments)
@@ -466,7 +524,6 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
             
             console.log(`✅ Found ${results?.length || 0} matches`)
             
-            // Store alternatives for find_section to use
             if (topAlternatives && topAlternatives.length > 0) {
               window._lastSearchAlternatives = topAlternatives
               console.log('📚 Stored alternatives:', topAlternatives)
@@ -575,7 +632,6 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
               throw new Error('Invalid page number')
             }
             
-            // Use alternatives from AI OR from stored search results
             const alternatives = args.alternatives || window._lastSearchAlternatives || []
             
             if (alternatives && alternatives.length > 0) {
@@ -633,7 +689,6 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
               }
             }))
             
-            // Clear stored alternatives after use
             window._lastSearchAlternatives = []
             
           } catch (e) {
@@ -670,6 +725,7 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
           console.error('🚨 API Error:', msg.error)
           setError(`${msg.error?.message || 'Unknown error'}. Tap voice button to retry.`)
           setVoiceStatus('Tap to talk')
+          setConversationState('idle')
           clearProcessingTimeout()
         }
 
@@ -785,6 +841,13 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
        'Select a regulation')
     : 'Select a regulation'
 
+  // Determine button state
+  const isButtonDisabled = !selectedDocId || tocEntries.length === 0 || isLoadingDocument
+  const isButtonConnecting = conversationState === 'connecting'
+  const isButtonListening = conversationState === 'listening'
+  const isButtonProcessing = conversationState === 'processing'
+  const isButtonReady = !isButtonDisabled && (conversationState === 'idle' || conversationState === 'ready')
+
   return (
     <>
       {isInitialLoading && (
@@ -873,14 +936,25 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
           <div className="mb-6">
             <div className="flex flex-col items-center gap-4 mb-4">
               <button
-                className={`relative h-24 w-24 rounded-2xl ring-4 backdrop-blur active:scale-95 transition
-                  ${isListening ? 'ring-yellow-400 bg-yellow-400/10' : 'ring-yellow-400/70 bg-white/10 hover:bg-white/15'}`}
+                className={`relative h-24 w-24 rounded-2xl backdrop-blur transition-all
+                  ${isButtonDisabled 
+                    ? 'ring-4 ring-neutral-600/50 bg-neutral-800/50 cursor-not-allowed' 
+                    : isButtonConnecting || isButtonProcessing
+                    ? 'ring-4 ring-yellow-400/70 bg-yellow-400/10'
+                    : isButtonListening
+                    ? 'ring-4 ring-yellow-400 bg-yellow-400/10'
+                    : 'ring-4 ring-yellow-400/70 bg-white/10 hover:bg-white/15 active:scale-95'
+                  }`}
                 onClick={startVoice}
-                disabled={!selectedDocId || tocEntries.length === 0 || isLoadingDocument}
+                disabled={isButtonDisabled}
                 aria-label="Tap to talk"
               >
                 <div className="flex items-center justify-center h-full relative">
-                  {isListening ? (
+                  {isButtonDisabled ? (
+                    <BoltIcon className="h-10 w-10" color="#737373" />
+                  ) : isButtonConnecting || isButtonProcessing ? (
+                    <Spinner className="h-10 w-10" color="#FACC15" />
+                  ) : isButtonListening ? (
                     <AudioBars active />
                   ) : (
                     <BoltIcon className="h-10 w-10" color="#FACC15" />
@@ -888,7 +962,9 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
                 </div>
               </button>
 
-              {voiceStatus && (
+              {!selectedDocId ? null : isLoadingDocument ? (
+                <div className="text-sm text-white/70 text-center">Loading document...</div>
+              ) : voiceStatus && (
                 <div className="text-sm text-white/70 text-center">{voiceStatus}</div>
               )}
 
