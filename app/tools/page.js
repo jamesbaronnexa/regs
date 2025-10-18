@@ -18,7 +18,7 @@ const BoltIcon = ({ className = '', color = 'currentColor' }) => (
 const AudioBars = ({ active = false }) => {
   if (!active) return null
   return (
-    <div className="absolute inset-0 flex items-center justify-center">
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
       <div className="bars">
         <span style={{ animationDelay: '0ms' }} />
         <span style={{ animationDelay: '120ms' }} />
@@ -460,19 +460,34 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
   useEffect(() => () => stopVoice(), [])
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white p-4">
+    <div className="min-h-screen bg-neutral-950 text-white p-4 touch-manipulation select-none">
+      <style jsx global>{`
+        * {
+          -webkit-tap-highlight-color: transparent;
+          -webkit-touch-callout: none;
+        }
+        input, select {
+          user-select: text;
+          -webkit-user-select: text;
+        }
+        body {
+          overscroll-behavior: none;
+          touch-action: pan-y;
+        }
+      `}</style>
+      
       <div className="max-w-4xl mx-auto">
         <header className="mb-6 mt-6">
           <div className="flex items-center gap-3 mb-4">
-            <LogoRounded className="h-8 w-8" />
+            <LogoRounded className="h-8 w-8 pointer-events-none" />
             <h1 className="text-base font-semibold tracking-tight">Regs</h1>
           </div>
         </header>
 
-        {/* Voice Input Section - Outside the card */}
+        {/* Voice Input Section */}
         <div className="mb-6 flex flex-col items-center gap-4">
           <button
-            className={`relative h-20 w-20 rounded-2xl ring-4 backdrop-blur active:scale-95 transition
+            className={`relative h-20 w-20 rounded-2xl ring-4 backdrop-blur active:scale-95 transition touch-manipulation
               ${isListening ? 'ring-yellow-400 bg-yellow-400/10' : 'ring-yellow-400/70 bg-white/10 hover:bg-white/15'}`}
             onClick={startVoice}
             aria-label="Voice input"
@@ -481,7 +496,7 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
               {isListening ? (
                 <AudioBars active />
               ) : (
-                <BoltIcon className="h-9 w-9" color="#FACC15" />
+                <BoltIcon className="h-9 w-9 pointer-events-none" color="#FACC15" />
               )}
             </div>
           </button>
@@ -493,7 +508,7 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
           {transcript && (
             <div className="w-full max-w-md p-3 rounded-xl bg-white/5 border border-white/10">
               <div className="text-xs text-white/60 mb-1">You said:</div>
-              <div className="text-sm">{transcript}</div>
+              <div className="text-sm select-text">{transcript}</div>
             </div>
           )}
         </div>
@@ -504,129 +519,46 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
             <p className="text-sm text-white/60">AS/NZS 3000 & 3008 Compliant</p>
           </div>
           
-          <div className="space-y-5">
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium w-32 flex-shrink-0">Supply Phase</label>
-              <div className="flex gap-3 flex-1">
-                <button
-                  onClick={() => setPhase('single')}
-                  className={`flex-1 py-3 px-4 rounded-xl border-2 transition font-medium ${
-                    phase === 'single' 
-                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
-                      : 'border-white/20 hover:border-white/40'
-                  }`}
-                >
-                  Single (230V)
-                </button>
-                <button
-                  onClick={() => setPhase('three')}
-                  className={`flex-1 py-3 px-4 rounded-xl border-2 transition font-medium ${
-                    phase === 'three' 
-                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
-                      : 'border-white/20 hover:border-white/40'
-                  }`}
-                >
-                  Three Phase (400V)
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium w-32 flex-shrink-0">Cores</label>
-              <div className="flex gap-3 flex-1">
-                <button
-                  onClick={() => setCores('single')}
-                  className={`flex-1 py-3 px-4 rounded-xl border-2 transition font-medium ${
-                    cores === 'single' 
-                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
-                      : 'border-white/20 hover:border-white/40'
-                  }`}
-                >
-                  Single Core
-                </button>
-                <button
-                  onClick={() => setCores('multi')}
-                  className={`flex-1 py-3 px-4 rounded-xl border-2 transition font-medium ${
-                    cores === 'multi' 
-                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
-                      : 'border-white/20 hover:border-white/40'
-                  }`}
-                >
-                  Multi-Core
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium w-32 flex-shrink-0">Conductor</label>
-              <div className="flex gap-3 flex-1">
-                <button
-                  onClick={() => setConductor('copper')}
-                  className={`flex-1 py-3 px-4 rounded-xl border-2 transition font-medium ${
-                    conductor === 'copper' 
-                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
-                      : 'border-white/20 hover:border-white/40'
-                  }`}
-                >
-                  Plain Copper
-                </button>
-                <button
-                  onClick={() => setConductor('tinned')}
-                  className={`flex-1 py-3 px-4 rounded-xl border-2 transition font-medium ${
-                    conductor === 'tinned' 
-                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
-                      : 'border-white/20 hover:border-white/40'
-                  }`}
-                >
-                  Tinned Copper
-                </button>
-                <button
-                  onClick={() => setConductor('aluminum')}
-                  className={`flex-1 py-3 px-4 rounded-xl border-2 transition font-medium ${
-                    conductor === 'aluminum' 
-                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
-                      : 'border-white/20 hover:border-white/40'
-                  }`}
-                >
-                  Aluminium
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium w-32 flex-shrink-0">Load Current (A)</label>
+          <div className="space-y-4">
+            {/* Load Current */}
+            <div>
+              <label className="text-sm font-medium text-white/70 mb-2 block">Load Current (A)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 value={load}
                 onChange={(e) => setLoad(e.target.value)}
                 onFocus={(e) => e.target.select()}
                 onClick={(e) => e.target.select()}
-                className="w-40 px-4 py-3 rounded-xl bg-white/5 border border-white/20 outline-none focus:border-yellow-400/50 text-2xl font-bold text-center"
+                className="w-full px-4 py-4 rounded-xl bg-white/5 border-2 border-white/20 outline-none focus:border-yellow-400/50 text-3xl font-bold text-center select-text touch-manipulation"
                 placeholder="20"
               />
             </div>
 
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium w-32 flex-shrink-0">Length (m)</label>
+            {/* Length */}
+            <div>
+              <label className="text-sm font-medium text-white/70 mb-2 block">Length (m)</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 value={length}
                 onChange={(e) => setLength(e.target.value)}
                 onFocus={(e) => e.target.select()}
                 onClick={(e) => e.target.select()}
-                className="w-40 px-4 py-3 rounded-xl bg-white/5 border border-white/20 outline-none focus:border-yellow-400/50 text-2xl font-bold text-center"
+                className="w-full px-4 py-4 rounded-xl bg-white/5 border-2 border-white/20 outline-none focus:border-yellow-400/50 text-3xl font-bold text-center select-text touch-manipulation"
                 placeholder="25"
               />
             </div>
 
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium w-32 flex-shrink-0">Cable Size (mm²)</label>
+            {/* Cable Size */}
+            <div>
+              <label className="text-sm font-medium text-white/70 mb-2 block">Cable Size (mm²)</label>
               <select
                 value={cableSize}
                 onChange={(e) => setCableSize(e.target.value)}
-                className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/20 outline-none focus:border-yellow-400/50 font-medium text-lg"
+                className="w-full px-4 py-4 rounded-xl bg-white/5 border-2 border-white/20 outline-none focus:border-yellow-400/50 font-bold text-xl text-center select-text touch-manipulation"
               >
                 {Object.keys(resistanceData[conductor] || resistanceData.copper)
                   .map(size => parseFloat(size))
@@ -638,12 +570,106 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
               </select>
             </div>
 
-            <div className="flex items-start gap-4">
-              <label className="text-sm font-medium w-32 flex-shrink-0 pt-3">Install Method</label>
+            {/* Supply Phase */}
+            <div>
+              <label className="text-sm font-medium text-white/70 mb-2 block">Supply Phase</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setPhase('single')}
+                  className={`py-4 px-4 rounded-xl border-2 transition font-semibold touch-manipulation ${
+                    phase === 'single' 
+                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
+                      : 'border-white/20 hover:border-white/40'
+                  }`}
+                >
+                  Single
+                  <div className="text-xs opacity-70 mt-0.5">230V</div>
+                </button>
+                <button
+                  onClick={() => setPhase('three')}
+                  className={`py-4 px-4 rounded-xl border-2 transition font-semibold touch-manipulation ${
+                    phase === 'three' 
+                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
+                      : 'border-white/20 hover:border-white/40'
+                  }`}
+                >
+                  Three Phase
+                  <div className="text-xs opacity-70 mt-0.5">400V</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Cores */}
+            <div>
+              <label className="text-sm font-medium text-white/70 mb-2 block">Cores</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setCores('single')}
+                  className={`py-4 px-4 rounded-xl border-2 transition font-semibold touch-manipulation ${
+                    cores === 'single' 
+                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
+                      : 'border-white/20 hover:border-white/40'
+                  }`}
+                >
+                  Single Core
+                </button>
+                <button
+                  onClick={() => setCores('multi')}
+                  className={`py-4 px-4 rounded-xl border-2 transition font-semibold touch-manipulation ${
+                    cores === 'multi' 
+                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
+                      : 'border-white/20 hover:border-white/40'
+                  }`}
+                >
+                  Multi-Core
+                </button>
+              </div>
+            </div>
+
+            {/* Conductor */}
+            <div>
+              <label className="text-sm font-medium text-white/70 mb-2 block">Conductor</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setConductor('copper')}
+                  className={`py-4 px-3 rounded-xl border-2 transition font-semibold text-sm touch-manipulation ${
+                    conductor === 'copper' 
+                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
+                      : 'border-white/20 hover:border-white/40'
+                  }`}
+                >
+                  Copper
+                </button>
+                <button
+                  onClick={() => setConductor('tinned')}
+                  className={`py-4 px-3 rounded-xl border-2 transition font-semibold text-sm touch-manipulation ${
+                    conductor === 'tinned' 
+                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
+                      : 'border-white/20 hover:border-white/40'
+                  }`}
+                >
+                  Tinned
+                </button>
+                <button
+                  onClick={() => setConductor('aluminum')}
+                  className={`py-4 px-3 rounded-xl border-2 transition font-semibold text-sm touch-manipulation ${
+                    conductor === 'aluminum' 
+                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400' 
+                      : 'border-white/20 hover:border-white/40'
+                  }`}
+                >
+                  Aluminium
+                </button>
+              </div>
+            </div>
+
+            {/* Install Method */}
+            <div>
+              <label className="text-sm font-medium text-white/70 mb-2 block">Install Method</label>
               <select
                 value={installMethod}
                 onChange={(e) => setInstallMethod(e.target.value)}
-                className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/20 outline-none focus:border-yellow-400/50 font-medium text-sm"
+                className="w-full px-4 py-4 rounded-xl bg-white/5 border-2 border-white/20 outline-none focus:border-yellow-400/50 font-medium text-base select-text touch-manipulation"
               >
                 {Object.entries(installationMethods).map(([code, desc]) => (
                   <option key={code} value={code}>{code}: {desc}</option>
@@ -651,12 +677,13 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
               </select>
             </div>
 
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium w-32 flex-shrink-0">Insulation</label>
+            {/* Insulation */}
+            <div>
+              <label className="text-sm font-medium text-white/70 mb-2 block">Insulation</label>
               <select
                 value={insulation}
                 onChange={(e) => setInsulation(e.target.value)}
-                className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/20 outline-none focus:border-yellow-400/50 font-medium"
+                className="w-full px-4 py-4 rounded-xl bg-white/5 border-2 border-white/20 outline-none focus:border-yellow-400/50 font-medium text-base select-text touch-manipulation"
               >
                 {Object.entries(insulationTypes).map(([code, desc]) => (
                   <option key={code} value={code}>{desc}</option>
@@ -664,16 +691,17 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
               </select>
             </div>
 
-            <div className="flex gap-3 pt-4">
+            {/* Calculate Button */}
+            <div className="flex gap-3 pt-2">
               <button
                 onClick={calculateVoltageDrop}
-                className="flex-1 py-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-neutral-950 font-bold text-xl transition"
+                className="flex-1 py-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-neutral-950 font-bold text-xl transition touch-manipulation active:scale-98"
               >
-                Calculate Voltage Drop
+                Calculate
               </button>
               <button
                 onClick={resetForm}
-                className="px-8 py-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/20 font-medium transition"
+                className="px-8 py-4 rounded-xl bg-white/5 hover:bg-white/10 border-2 border-white/20 font-medium transition touch-manipulation active:scale-98"
               >
                 Reset
               </button>
@@ -694,21 +722,21 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
                       : 'bg-red-500/10 border-red-500/30'
                   }`}>
                     <div className="text-sm text-white/60 mb-2">Voltage Drop</div>
-                    <div className="text-5xl font-bold mb-3">
-                      {result.voltageDrop}V <span className="text-3xl">({result.percentage}%)</span>
+                    <div className="text-4xl sm:text-5xl font-bold mb-3">
+                      {result.voltageDrop}V <span className="text-2xl sm:text-3xl">({result.percentage}%)</span>
                     </div>
                     <div className="flex items-center gap-2 mb-4">
                       {result.acceptable ? (
                         <>
                           <span className="text-green-400 text-2xl">✓</span>
-                          <span className="text-green-400 font-medium text-lg">
+                          <span className="text-green-400 font-medium text-base sm:text-lg">
                             Complies with AS/NZS 3000 (≤5%)
                           </span>
                         </>
                       ) : (
                         <>
                           <span className="text-red-400 text-2xl">✗</span>
-                          <span className="text-red-400 font-medium text-lg">
+                          <span className="text-red-400 font-medium text-base sm:text-lg">
                             Exceeds 5% limit - Use larger cable or shorter run
                           </span>
                         </>
@@ -719,26 +747,26 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                       <div className="text-xs text-white/60 mb-1">System Voltage</div>
-                      <div className="text-2xl font-bold">{result.systemVoltage}V</div>
+                      <div className="text-xl sm:text-2xl font-bold">{result.systemVoltage}V</div>
                     </div>
                     <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                       <div className="text-xs text-white/60 mb-1">Max Length @ 5%</div>
-                      <div className="text-2xl font-bold">{result.maxLength}m</div>
+                      <div className="text-xl sm:text-2xl font-bold">{result.maxLength}m</div>
                     </div>
                     <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                       <div className="text-xs text-white/60 mb-1">Resistance (R)</div>
-                      <div className="text-xl font-bold">{result.resistance} mΩ/m</div>
+                      <div className="text-lg sm:text-xl font-bold">{result.resistance} mΩ/m</div>
                     </div>
                     <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                       <div className="text-xs text-white/60 mb-1">Voltage Drop (Vc)</div>
-                      <div className="text-xl font-bold">{result.VcUsed} mV/A.m</div>
+                      <div className="text-lg sm:text-xl font-bold">{result.VcUsed} mV/A.m</div>
                       <div className="text-xs text-white/50 mt-1">
                         {phase === 'single' ? `3φ: ${result.Vc} × 1.155` : `From Table @ ${result.operatingTemp}`}
                       </div>
                     </div>
                     <div className="col-span-2 p-4 rounded-xl bg-yellow-400/10 border border-yellow-400/30">
                       <div className="text-xs text-yellow-400 mb-1">Calculation Method</div>
-                      <div className="text-lg font-bold text-yellow-400">{result.calculationMethod}</div>
+                      <div className="text-base sm:text-lg font-bold text-yellow-400">{result.calculationMethod}</div>
                       <div className="text-xs text-white/60 mt-1">
                         Formula: Vd = (Vc × I × L) / 1000
                       </div>
@@ -758,7 +786,7 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
                       <div className="flex items-start gap-3">
                         <span className="text-xl">📖</span>
                         <div>
-                          <div className="font-medium text-yellow-400">
+                          <div className="font-medium text-yellow-400 text-sm sm:text-base">
                             {result.regulationVD}
                           </div>
                           <div className="text-sm text-white/70 mt-1">
@@ -771,7 +799,7 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
                       <div className="flex items-start gap-3">
                         <span className="text-xl">📊</span>
                         <div>
-                          <div className="font-medium text-yellow-400">
+                          <div className="font-medium text-yellow-400 text-sm sm:text-base">
                             {result.regulationResistance}
                           </div>
                           <div className="text-sm text-white/70 mt-1">
