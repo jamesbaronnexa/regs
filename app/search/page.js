@@ -291,30 +291,32 @@ export default function SearchPage() {
       setConversationState('connecting')
       setError(null)
 
-      const localStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      })
-      localStreamRef.current = localStream
+      // Only request microphone if we don't already have it
+      if (!localStreamRef.current) {
+        const localStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        })
+        localStreamRef.current = localStream
+      }
 
+      // Reuse existing connection if available
       if (pcRef.current && dcRef.current && dcRef.current.readyState === 'open') {
-        const audioTrack = localStream.getAudioTracks()[0]
+        const audioTrack = localStreamRef.current.getAudioTracks()[0]
         audioTrack.enabled = true
-        const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'audio')
-        if (sender) {
-          await sender.replaceTrack(audioTrack)
-        } else {
-          pcRef.current.addTrack(audioTrack, localStream)
-        }
         setVoiceStatus('Listening - just speak!')
         setConversationState('ready')
         return
       }
 
-      await startConnection(localStream)
+      // Enable the track for new connection
+      const audioTrack = localStreamRef.current.getAudioTracks()[0]
+      audioTrack.enabled = true
+
+      await startConnection()
       setVoiceStatus('Listening - just speak!')
       setConversationState('ready')
 
@@ -327,7 +329,7 @@ export default function SearchPage() {
     }
   }
 
-  const startConnection = async (localStream = null) => {
+  const startConnection = async () => {
     try {
       setVoiceStatus('Connecting...')
       setConversationState('connecting')
@@ -337,9 +339,10 @@ export default function SearchPage() {
       })
       pcRef.current = pc
 
-      if (localStream) {
-        const audioTrack = localStream.getAudioTracks()[0]
-        pc.addTrack(audioTrack, localStream)
+      // Add the existing audio track from localStreamRef
+      if (localStreamRef.current) {
+        const audioTrack = localStreamRef.current.getAudioTracks()[0]
+        pc.addTrack(audioTrack, localStreamRef.current)
       }
 
       pc.ontrack = (event) => {
@@ -363,7 +366,7 @@ export default function SearchPage() {
 
       dc.onopen = () => {
         reconnectAttemptRef.current = 0
-        setVoiceStatus(localStream ? 'Listening - just speak!' : 'Ready - type or speak!')
+        setVoiceStatus('Listening - just speak!')
         setIsConnected(true)
         setConversationState('ready')
 
@@ -1018,6 +1021,15 @@ Be concise and helpful. If no matches found, say: "I couldn't find that in this 
               <div className="text-sm text-red-400">{error}</div>
             </div>
           )}
+
+          <div className="text-center">
+            <a 
+              href="/tools" 
+              className="text-sm text-yellow-400/70 hover:text-yellow-400 transition-colors underline"
+            >
+              More Tools
+            </a>
+          </div>
         </div>
 
         {showViewer && pdfUrl && (
