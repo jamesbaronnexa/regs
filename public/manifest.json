@@ -2,7 +2,7 @@
   "name": "Regs",
   "short_name": "Regs",
   "description": "Voice search for electrical regulations",
-  "start_url": "/search",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0B0F19",
   "theme_color": "#FACC15",
