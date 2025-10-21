@@ -19,6 +19,7 @@ const LogoRounded = ({ className = '' }) => (
 const RegsApp = () => {
   const [mainTab, setMainTab] = useState('search');
   const [activeTool, setActiveTool] = useState('voltage-drop');
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const tools = [
     { id: 'voltage-drop', name: 'Voltage Drop Calculator', icon: Zap },
@@ -33,8 +34,22 @@ const RegsApp = () => {
     setMainTab(tab);
   };
 
+  // Hide loading screen after 1.5 seconds
+  React.useEffect(() => {
+    setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 1500);
+  }, []);
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
+      {isInitialLoading && (
+        <div className="fixed inset-0 bg-neutral-950 z-50 flex flex-col items-center justify-center gap-4">
+          <LogoRounded className="h-24 w-24" />
+          <h1 className="text-2xl font-bold tracking-tight text-white">Regs</h1>
+        </div>
+      )}
+
       <style jsx global>{`
         * {
           -webkit-tap-highlight-color: transparent;
