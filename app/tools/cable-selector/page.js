@@ -2,13 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 
-const LogoRounded = ({ className = '' }) => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-    <rect x="0" y="0" width="24" height="24" rx="6" fill="#FACC15" />
-    <path d="M13 3L4 14h6l-1 7 9-11h-6l1-7z" fill="#0B0F19" />
-  </svg>
-);
-
 const CableSizeSelector = () => {
   // Input states
   const [loadCurrent, setLoadCurrent] = useState('');
@@ -184,14 +177,7 @@ const CableSizeSelector = () => {
       `}</style>
       
       <div className="max-w-4xl mx-auto">
-        <header className="mb-3 mt-3">
-          <div className="flex items-center gap-2">
-            <LogoRounded className="h-6 w-6 pointer-events-none" />
-            <h1 className="text-sm font-semibold tracking-tight">Regs</h1>
-          </div>
-        </header>
-
-        <div className="p-4 rounded-xl bg-neutral-900/80 border-2 border-white/10">
+        <div className="p-4 rounded-xl bg-neutral-900/80 border-2 border-white/10 mt-4">
           <div className="mb-4">
             <h2 className="text-lg font-bold">Cable Size Selector</h2>
             <p className="text-xs text-white/60">AS/NZS 3000 & 3008 Compliant</p>
