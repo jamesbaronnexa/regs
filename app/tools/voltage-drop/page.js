@@ -2,13 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react'
 
-const LogoRounded = ({ className = '' }) => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
-    <rect x="0" y="0" width="24" height="24" rx="6" fill="#FACC15" />
-    <path d="M13 3L4 14h6l-1 7 9-11h-6l1-7z" fill="#0B0F19" />
-  </svg>
-)
-
 const BoltIcon = ({ className = '', color = 'currentColor' }) => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
     <path d="M13 3L4 14h6l-1 7 9-11h-6l1-7z" fill={color} />
@@ -477,14 +470,7 @@ IMPORTANT: Keep your response VERY brief. Just say "Got it, calculating now" or 
       `}</style>
       
       <div className="max-w-4xl mx-auto">
-        <header className="mb-3 mt-3">
-          <div className="flex items-center gap-2">
-            <LogoRounded className="h-6 w-6 pointer-events-none" />
-            <h1 className="text-sm font-semibold tracking-tight">Regs</h1>
-          </div>
-        </header>
-
-        <div className="p-4 rounded-xl bg-neutral-900/80 border-2 border-white/10">
+        <div className="p-4 rounded-xl bg-neutral-900/80 border-2 border-white/10 mt-4">
           <div className="flex items-start justify-between gap-4 mb-2">
             <div className="flex-1">
               <h2 className="text-lg font-bold">Voltage Drop Calculator</h2>
