@@ -45,9 +45,7 @@ export default function ClaudeSearchPage() {
       const data = await response.json()
       if (data.error) throw new Error(data.error)
       setDocuments(data.documents || [])
-      if (data.documents?.length > 0) {
-        setSelectedDocId(data.documents[0].id)
-      }
+      // Don't auto-select first document - let user choose
     } catch (error) {
       console.error('Error loading documents:', error)
       setError(`Failed to load documents: ${error.message}`)
@@ -159,20 +157,11 @@ export default function ClaudeSearchPage() {
   // Show search form
   return (
     <div className="min-h-screen bg-neutral-950 text-white p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-yellow-400 mb-2">Regs Search</h1>
-          <p className="text-white/60">Ask anything about building and electrical regulations</p>
-        </div>
-
-        {/* Document Selector */}
+      <div className="max-w-2xl mx-auto">
+        {/* Document Selector - starts empty */}
         <div className="mb-6 p-5 rounded-2xl bg-neutral-900/80 border-2 border-yellow-400/60">
           <div className="text-xs font-semibold text-yellow-400/90 uppercase tracking-wider mb-2">
-            Currently Searching
-          </div>
-          <div className="text-lg font-bold text-white mb-3">
-            {currentDocTitle}
+            Select Regulation
           </div>
           
           <select
@@ -180,7 +169,7 @@ export default function ClaudeSearchPage() {
             onChange={(e) => setSelectedDocId(Number(e.target.value))}
             className="w-full rounded-xl bg-white/10 hover:bg-white/15 px-4 py-3 outline-none text-white font-medium transition cursor-pointer border border-white/20"
           >
-            <option value="" disabled style={{ background: '#0B0F19' }}>
+            <option value="" style={{ background: '#0B0F19' }}>
               Choose a regulation to search
             </option>
             {documents.map(doc => (
@@ -191,26 +180,24 @@ export default function ClaudeSearchPage() {
           </select>
         </div>
 
-        {/* Search Input */}
+        {/* Search Input - Mobile friendly stacked layout */}
         <div className="mb-6">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask your question here..."
-              disabled={searching || !selectedDocId}
-              className="flex-1 px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white text-base placeholder-white/40 outline-none focus:border-yellow-400/50 disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-            <button
-              onClick={handleSearch}
-              disabled={searching || !selectedDocId || !query.trim()}
-              className="px-8 py-4 bg-yellow-400/20 hover:bg-yellow-400/30 disabled:bg-neutral-800/50 disabled:text-white/30 disabled:cursor-not-allowed border border-yellow-400/30 rounded-xl text-yellow-400 text-base font-medium transition"
-            >
-              {searching ? 'Searching...' : 'Search Regs'}
-            </button>
-          </div>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask your question here..."
+            disabled={searching || !selectedDocId}
+            className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white text-base placeholder-white/40 outline-none focus:border-yellow-400/50 disabled:opacity-50 disabled:cursor-not-allowed mb-3"
+          />
+          <button
+            onClick={handleSearch}
+            disabled={searching || !selectedDocId || !query.trim()}
+            className="w-full px-8 py-4 bg-yellow-400/20 hover:bg-yellow-400/30 disabled:bg-neutral-800/50 disabled:text-white/30 disabled:cursor-not-allowed border border-yellow-400/30 rounded-xl text-yellow-400 text-base font-semibold transition"
+          >
+            {searching ? 'Searching...' : 'Search Regs'}
+          </button>
         </div>
 
         {/* Error Display */}
