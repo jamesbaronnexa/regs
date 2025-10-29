@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { createClient } from '@supabase/supabase-js'
 
@@ -23,6 +23,12 @@ export default function ClaudeSearchPage() {
   const [showViewer, setShowViewer] = useState(false)
   const [pageNumber, setPageNumber] = useState(1)
   const [pdfUrl, setPdfUrl] = useState(null)
+  
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false)
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
 
   // Load documents on mount
   useEffect(() => {
@@ -119,8 +125,102 @@ export default function ClaudeSearchPage() {
     }
   }
 
+  // Voice recording functions
+  const startRecording = async () => {
+    if (!selectedDocId) {
+      setError('Please select a document first')
+      return
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      
+      mediaRecorderRef.current = new MediaRecorder(stream, {
+        mimeType: 'audio/webm'
+      })
+      
+      audioChunksRef.current = []
+      
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+      
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        await transcribeAndSearch(audioBlob)
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop())
+      }
+      
+      mediaRecorderRef.current.start()
+      setIsRecording(true)
+      setError(null)
+      
+      console.log('🎤 Recording started')
+      
+    } catch (error) {
+      console.error('Microphone access error:', error)
+      setError('Could not access microphone. Please check permissions.')
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+      console.log('🛑 Recording stopped')
+    }
+  }
+
+  const transcribeAndSearch = async (audioBlob) => {
+    setIsTranscribing(true)
+    
+    try {
+      // Send to Whisper for transcription
+      const formData = new FormData()
+      formData.append('audio', audioBlob, 'recording.webm')
+      
+      console.log('📤 Sending audio to Whisper...')
+      
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Transcription failed')
+      }
+      
+      console.log('✅ Transcribed:', data.text)
+      
+      // Set the query and trigger search
+      setQuery(data.text)
+      await handleSearch(data.text)
+      
+    } catch (error) {
+      console.error('Transcription error:', error)
+      setError(`Voice search failed: ${error.message}`)
+    } finally {
+      setIsTranscribing(false)
+    }
+  }
+
+  const handleVoiceClick = () => {
+    if (isRecording) {
+      stopRecording()
+    } else {
+      startRecording()
+    }
+  }
+
   const currentDoc = documents.find(d => d.id === selectedDocId)
   const currentDocTitle = currentDoc?.title || currentDoc?.filename || 'Select a regulation'
+
 
   // Show PDF viewer with results if we have them
   if (showViewer && pdfUrl && result) {
@@ -146,10 +246,9 @@ export default function ClaudeSearchPage() {
           setQuery(newQuery)
           handleSearch(newQuery)
         }}
-        onVoiceClick={() => {
-          // Voice search not available in text-only mode
-          alert('Voice search is only available in voice mode. Please type your question in the search box.')
-        }}
+        onVoiceClick={handleVoiceClick}
+        isListening={isRecording}
+        voiceStatus={isTranscribing ? 'Converting to text...' : isRecording ? 'Listening...' : ''}
         defaultTab={result.metadata?.fastPath ? 'pdf' : 'ai'} // Open PDF tab for direct references
       />
     )
@@ -183,18 +282,61 @@ export default function ClaudeSearchPage() {
 
         {/* Search Input - Mobile friendly stacked layout */}
         <div className="mb-6">
+          {/* Voice Button */}
+          <div className="mb-3 flex justify-center">
+            <button
+              onClick={handleVoiceClick}
+              disabled={!selectedDocId || searching || isTranscribing}
+              className={`relative h-16 w-16 rounded-full ring-4 backdrop-blur active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed
+                ${isRecording 
+                  ? 'ring-red-400 bg-red-400/20 animate-pulse' 
+                  : isTranscribing
+                  ? 'ring-yellow-400 bg-yellow-400/20'
+                  : 'ring-yellow-400/70 bg-white/10 hover:bg-white/15'
+                }`}
+              aria-label={isRecording ? 'Stop recording' : 'Start voice search'}
+            >
+              <div className="flex items-center justify-center h-full">
+                {isTranscribing ? (
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-yellow-400 border-t-transparent"></div>
+                ) : (
+                  <svg 
+                    className={`h-8 w-8 ${isRecording ? 'text-red-400' : 'text-yellow-400'}`}
+                    fill="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                  </svg>
+                )}
+              </div>
+            </button>
+          </div>
+          
+          {isRecording && (
+            <div className="text-center mb-3 text-yellow-400 text-sm animate-pulse">
+              🎤 Listening... Tap again to stop
+            </div>
+          )}
+          
+          {isTranscribing && (
+            <div className="text-center mb-3 text-white/70 text-sm">
+              Converting speech to text...
+            </div>
+          )}
+          
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask your question here..."
-            disabled={searching || !selectedDocId}
+            placeholder="Ask your question here or use voice..."
+            disabled={searching || !selectedDocId || isRecording || isTranscribing}
             className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white text-base placeholder-white/40 outline-none focus:border-yellow-400/50 disabled:opacity-50 disabled:cursor-not-allowed mb-3"
           />
           <button
             onClick={handleSearch}
-            disabled={searching || !selectedDocId || !query.trim()}
+            disabled={searching || !selectedDocId || !query.trim() || isRecording || isTranscribing}
             className="w-full px-8 py-4 bg-yellow-400/20 hover:bg-yellow-400/30 disabled:bg-neutral-800/50 disabled:text-white/30 disabled:cursor-not-allowed border border-yellow-400/30 rounded-xl text-yellow-400 text-base font-semibold transition"
           >
             {searching ? 'Searching...' : 'Search Regs'}
