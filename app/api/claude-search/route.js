@@ -91,7 +91,11 @@ Return ONLY a JSON array of 5 search query strings, nothing else. Example format
     for (const searchQuery of searchQueries) {
       console.log(`  Searching: "${searchQuery}"`)
       
-      const searchResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/search-toc`, {
+      // Get base URL - works in both dev and production
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+      
+      const searchResponse = await fetch(`${baseUrl}/api/search-toc`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
