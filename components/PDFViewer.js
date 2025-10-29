@@ -45,7 +45,8 @@ export default function PDFViewer({
   voiceStatus = '',
   query = '',
   onVoiceClick,
-  onTextQuery
+  onTextQuery,
+  aiResult = null // Claude AI results passed from search
 }) {
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
@@ -62,6 +63,9 @@ export default function PDFViewer({
   const [zoomLevel, setZoomLevel] = useState(1)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [textInput, setTextInput] = useState('')
+  
+  // Tab state - show AI tab first if we have Claude results
+  const [activeTab, setActiveTab] = useState(aiResult ? 'ai' : 'pdf')
   
   const touchStartX = useRef(null)
   const touchStartY = useRef(null)
@@ -134,6 +138,13 @@ export default function PDFViewer({
     
     renderPage(pdfDoc, pageNumber)
   }, [pdfDoc, pageNumber])
+  
+  // Re-render when switching to PDF tab
+  useEffect(() => {
+    if (activeTab === 'pdf' && pdfDoc && canvasRef.current && !rendering) {
+      renderPage(pdfDoc, pageNumber)
+    }
+  }, [activeTab])
 
   useEffect(() => {
     let timeout
@@ -457,6 +468,32 @@ export default function PDFViewer({
               )}
             </div>
           </div>
+          
+          {/* Tabs below search bar */}
+          {aiResult && (
+            <div className="flex gap-2 justify-center mt-3">
+              <button
+                onClick={() => setActiveTab('ai')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  activeTab === 'ai'
+                    ? 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/30'
+                    : 'bg-white/5 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                🤖 AI Answer
+              </button>
+              <button
+                onClick={() => setActiveTab('pdf')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  activeTab === 'pdf'
+                    ? 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/30'
+                    : 'bg-white/5 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                📄 PDF
+              </button>
+            </div>
+          )}
         </div>
       </div>
       
@@ -468,22 +505,89 @@ export default function PDFViewer({
           touchAction: zoomLevel > 1 ? 'pan-x pan-y' : 'manipulation'
         }}
       >
-        <div 
-          ref={containerRef} 
-          style={{ 
-            position: 'relative',
-            backgroundColor: 'white',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}
-        >
-          <canvas 
-            ref={canvasRef}
-            style={{
-              display: 'block',
-              imageRendering: 'crisp-edges'
+        {/* AI Tab - Show Claude's answer */}
+        {activeTab === 'ai' && aiResult ? (
+          <div className="max-w-4xl w-full p-6 overflow-y-auto h-full">
+            {/* User's Question */}
+            {query && (
+              <div className="bg-neutral-900/95 backdrop-blur-lg rounded-xl p-4 mb-4 border border-white/10">
+                <div className="text-xs text-white/50 mb-2">You asked:</div>
+                <div className="text-white text-base font-medium">"{query}"</div>
+              </div>
+            )}
+            
+            {/* AI Answer */}
+            <div className="bg-white rounded-xl p-6 shadow-lg">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="text-yellow-500 font-bold text-xl">Regs says:</div>
+                <div className="text-xs text-gray-400">
+                  {aiResult.metadata?.model} • {aiResult.metadata?.tokensUsed} tokens
+                </div>
+              </div>
+              
+              <div 
+                className="prose prose-sm max-w-none text-gray-800"
+                dangerouslySetInnerHTML={{
+                  __html: aiResult.answer
+                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-yellow-600 font-semibold">$1</strong>')
+                    .replace(/\n\n/g, '</p><p class="mt-4">')
+                    .replace(/^(.+)$/, '<p>$1</p>')
+                }}
+              />
+            </div>
+            
+            {/* Relevant Sections - Dark UI */}
+            {aiResult.sections && aiResult.sections.length > 0 && (
+              <div className="mt-4">
+                <div className="bg-neutral-900/95 backdrop-blur-lg rounded-xl p-4 border border-white/10">
+                  <div className="text-sm font-semibold text-white/70 mb-3">
+                    📚 Relevant Sections ({aiResult.sections.length})
+                  </div>
+                  <div className="space-y-2">
+                    {aiResult.sections.map((section, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          onPageChange(section.pdfPage)
+                          setActiveTab('pdf')
+                        }}
+                        className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition border border-white/10 hover:border-yellow-400/30"
+                      >
+                        <div className="text-yellow-400 font-semibold text-sm mb-1">
+                          {section.section_number}
+                        </div>
+                        <div className="text-white/90 text-sm mb-1">
+                          {section.title}
+                        </div>
+                        <div className="text-white/50 text-xs">
+                          Page {section.page} (PDF page {section.pdfPage})
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* PDF Tab - Show the actual PDF */
+          <div 
+            ref={containerRef} 
+            style={{ 
+              position: 'relative',
+              backgroundColor: 'white',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
             }}
-          />
-        </div>
+          >
+            <canvas 
+              ref={canvasRef}
+              style={{
+                display: 'block',
+                imageRendering: 'crisp-edges'
+              }}
+            />
+          </div>
+        )}
 
         {alternativeMatches.length > 0 && (
           <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
@@ -494,7 +598,15 @@ export default function PDFViewer({
                   {alternativeMatches.map((alt, idx) => (
                     <button
                       key={idx}
-                      onClick={() => onAlternativeClick?.(alt)}
+                      onClick={() => {
+                        if (activeTab === 'ai') {
+                          // Switch to PDF tab and jump to page
+                          onPageChange(alt.pdfPage || alt.page)
+                          setActiveTab('pdf')
+                        } else {
+                          onAlternativeClick?.(alt)
+                        }
+                      }}
                       className="px-3 py-1 rounded-full bg-yellow-400/10 hover:bg-yellow-400/20 transition border border-yellow-400/30 text-xs"
                       title={alt.title}
                     >
