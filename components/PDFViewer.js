@@ -46,7 +46,8 @@ export default function PDFViewer({
   query = '',
   onVoiceClick,
   onTextQuery,
-  aiResult = null // Claude AI results passed from search
+  aiResult = null, // Claude AI results passed from search
+  defaultTab = 'ai' // Which tab to show first: 'ai' or 'pdf'
 }) {
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
@@ -64,8 +65,8 @@ export default function PDFViewer({
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [textInput, setTextInput] = useState('')
   
-  // Tab state - show AI tab first if we have Claude results
-  const [activeTab, setActiveTab] = useState(aiResult ? 'ai' : 'pdf')
+  // Tab state - use defaultTab prop (ai for normal search, pdf for direct references)
+  const [activeTab, setActiveTab] = useState(defaultTab)
   
   const touchStartX = useRef(null)
   const touchStartY = useRef(null)
@@ -452,7 +453,7 @@ export default function PDFViewer({
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleTextSubmit()}
-                  placeholder={query ? `Asked: "${query.substring(0, 30)}${query.length > 30 ? '...' : ''}"` : "Type your question or tap voice button..."}
+                  placeholder="Ask another question..."
                   className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm placeholder-white/40 outline-none focus:border-yellow-400/50"
                 />
                 <button
