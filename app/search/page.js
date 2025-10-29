@@ -210,14 +210,6 @@ export default function ClaudeSearchPage() {
     }
   }
 
-  const handleVoiceClick = () => {
-    if (isRecording) {
-      stopRecording()
-    } else {
-      startRecording()
-    }
-  }
-
   const currentDoc = documents.find(d => d.id === selectedDocId)
   const currentDocTitle = currentDoc?.title || currentDoc?.filename || 'Select a regulation'
 
@@ -246,9 +238,10 @@ export default function ClaudeSearchPage() {
           setQuery(newQuery)
           handleSearch(newQuery)
         }}
-        onVoiceClick={handleVoiceClick}
+        onVoiceClick={startRecording}
+        onVoiceRelease={stopRecording}
         isListening={isRecording}
-        voiceStatus={isTranscribing ? 'Converting to text...' : isRecording ? 'Listening...' : ''}
+        voiceStatus={isTranscribing ? 'Converting to text...' : isRecording ? 'Release to send' : ''}
         defaultTab={result.metadata?.fastPath ? 'pdf' : 'ai'} // Open PDF tab for direct references
       />
     )
@@ -282,19 +275,23 @@ export default function ClaudeSearchPage() {
 
         {/* Search Input - Mobile friendly stacked layout */}
         <div className="mb-6">
-          {/* Voice Button */}
+          {/* Voice Button - Hold to speak */}
           <div className="mb-3 flex justify-center">
             <button
-              onClick={handleVoiceClick}
+              onMouseDown={startRecording}
+              onMouseUp={stopRecording}
+              onMouseLeave={stopRecording}
+              onTouchStart={startRecording}
+              onTouchEnd={stopRecording}
               disabled={!selectedDocId || searching || isTranscribing}
-              className={`relative h-16 w-16 rounded-full ring-4 backdrop-blur active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed
+              className={`relative h-16 w-16 rounded-full ring-4 backdrop-blur transition disabled:opacity-50 disabled:cursor-not-allowed select-none
                 ${isRecording 
-                  ? 'ring-red-400 bg-red-400/20 animate-pulse' 
+                  ? 'ring-red-400 bg-red-400/20 scale-110' 
                   : isTranscribing
                   ? 'ring-yellow-400 bg-yellow-400/20'
-                  : 'ring-yellow-400/70 bg-white/10 hover:bg-white/15'
+                  : 'ring-yellow-400/70 bg-white/10 hover:bg-white/15 active:scale-95'
                 }`}
-              aria-label={isRecording ? 'Stop recording' : 'Start voice search'}
+              aria-label="Hold to speak"
             >
               <div className="flex items-center justify-center h-full">
                 {isTranscribing ? (
@@ -313,17 +310,23 @@ export default function ClaudeSearchPage() {
             </button>
           </div>
           
-          {isRecording && (
-            <div className="text-center mb-3 text-yellow-400 text-sm animate-pulse">
-              🎤 Listening... Tap again to stop
-            </div>
-          )}
-          
-          {isTranscribing && (
-            <div className="text-center mb-3 text-white/70 text-sm">
-              Converting speech to text...
-            </div>
-          )}
+          <div className="text-center mb-3 text-sm h-5">
+            {isRecording && (
+              <div className="text-red-400 font-medium animate-pulse">
+                🎤 Recording... Release to send
+              </div>
+            )}
+            {isTranscribing && (
+              <div className="text-white/70">
+                Converting speech to text...
+              </div>
+            )}
+            {!isRecording && !isTranscribing && (
+              <div className="text-white/40">
+                Hold button and speak
+              </div>
+            )}
+          </div>
           
           <input
             type="text"
