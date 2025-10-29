@@ -150,6 +150,7 @@ export default function ClaudeSearchPage() {
           // Voice search not available in text-only mode
           alert('Voice search is only available in voice mode. Please type your question in the search box.')
         }}
+        defaultTab={result.metadata?.fastPath ? 'pdf' : 'ai'} // Open PDF tab for direct references
       />
     )
   }
@@ -210,9 +211,42 @@ export default function ClaudeSearchPage() {
 
         {/* Loading State */}
         {searching && (
-          <div className="mb-6 p-8 rounded-xl bg-neutral-900/50 border border-white/10 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-yellow-400 border-t-transparent mb-4"></div>
-            <div className="text-white/70">Claude is searching and analyzing...</div>
+          <div className="mb-6 p-6 rounded-xl bg-neutral-900/50 border border-white/10">
+            <div className="flex items-center justify-center mb-4">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-yellow-400 border-t-transparent"></div>
+            </div>
+            <div className="text-white/70 text-center mb-3">Regs is searching and analyzing...</div>
+            
+            {/* Progress bar that fills left to right */}
+            <div className="w-full bg-neutral-800 rounded-full h-2 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 animate-progress-fill rounded-full"></div>
+            </div>
+            
+            <style jsx>{`
+              @keyframes progress-fill {
+                0% {
+                  width: 0%;
+                }
+                20% {
+                  width: 30%;
+                }
+                40% {
+                  width: 50%;
+                }
+                60% {
+                  width: 70%;
+                }
+                80% {
+                  width: 85%;
+                }
+                100% {
+                  width: 95%;
+                }
+              }
+              .animate-progress-fill {
+                animation: progress-fill 12s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+              }
+            `}</style>
           </div>
         )}
       </div>
