@@ -512,7 +512,7 @@ export default function PDFViewer({
             {query && (
               <div className="bg-neutral-900/95 backdrop-blur-lg rounded-xl p-4 mb-4 border border-white/10">
                 <div className="text-xs text-white/50 mb-2">You asked:</div>
-                <div className="text-white text-base font-medium">"{query}"</div>
+                <div className="text-white text-base font-medium">&ldquo;{query}&rdquo;</div>
               </div>
             )}
             
