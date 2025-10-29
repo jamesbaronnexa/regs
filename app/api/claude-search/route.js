@@ -30,6 +30,63 @@ export async function POST(request) {
       }, { status: 400 })
     }
 
+    // FAST PATH: Direct table/section/clause lookup
+    const directReferencePattern = /^(?:table|section|clause|appendix|figure|part|chapter)\s*[\d.]+\s*$/i
+    const trimmedQuestion = question.trim()
+    
+    console.log('🔍 Checking fast path:', {
+      query: trimmedQuestion,
+      matches: directReferencePattern.test(trimmedQuestion)
+    })
+    
+    if (directReferencePattern.test(trimmedQuestion)) {
+      console.log('⚡ Fast path: Direct reference detected, skipping AI analysis')
+      
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+      
+      const searchResponse = await fetch(`${baseUrl}/api/search-toc`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId: documentId,
+          query: question.trim()
+        })
+      })
+
+      const searchData = await searchResponse.json()
+      
+      if (searchData.results && searchData.results.length > 0) {
+        const topResult = searchData.results[0]
+        
+        // Get document info for PDF offset
+        const { data: docData } = await supabase
+          .from('documents')
+          .select('title, pdf_page_offset')
+          .eq('id', documentId)
+          .single()
+        
+        return NextResponse.json({
+          success: true,
+          answer: `**Found: ${topResult.section_number} - ${topResult.title}**\n\nSee page ${topResult.document_page} in the document.`,
+          sections: [{
+            section_number: topResult.section_number,
+            title: topResult.title,
+            page: topResult.document_page,
+            pdfPage: topResult.document_page + (docData?.pdf_page_offset || 0)
+          }],
+          pageReferences: [{ page: topResult.document_page, type: 'direct' }],
+          metadata: {
+            question,
+            document: docData?.title,
+            searchResultCount: 1,
+            fastPath: true,
+            model: 'direct-lookup'
+          }
+        })
+      }
+    }
+
     // Step 1: Get document info
     const { data: docData, error: docError } = await supabase
       .from('documents')
