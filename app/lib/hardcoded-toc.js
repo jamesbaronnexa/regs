@@ -1922,7 +1922,528 @@ export const AS_NZS_3008_CONFIG = {
     { section: "Table D2", title: "Low magnetic field configurations", page: 144, level: 2, entry_type: "table", parent_section: "APPENDIX D", full_path: "Appendix D > Table D2" },
   ]
 };
+
+// E2/AS1 External Moisture - Fourth Edition (Effective 28 July 2025)
+// COMPREHENSIVE Table of Contents with all subsections, tables, and figures
+ 
+export const E2_EXTERNAL_MOISTURE_TOC = [
   
+  // PART 1: GENERAL (Pages 7-9)
+  { section: "1", title: "GENERAL", page: 7, level: 0, entry_type: "section", parent_section: null, full_path: "Part 1: General" },
+  
+  { section: "1.1", title: "Introduction", page: 7, level: 1, entry_type: "section", parent_section: "1", full_path: "Part 1 > Introduction" },
+  { section: "1.1.1", title: "Scope of this document", page: 7, level: 2, entry_type: "section", parent_section: "1.1", full_path: "Part 1 > Introduction > Scope of this document" },
+  { section: "1.1.1.1", title: "Building coverage", page: 7, level: 3, entry_type: "section", parent_section: "1.1.1", full_path: "Part 1 > Introduction > Scope > Building coverage" },
+  { section: "1.1.1.2", title: "Engineering design requirements", page: 7, level: 3, entry_type: "section", parent_section: "1.1.1", full_path: "Part 1 > Introduction > Scope > Engineering design requirements" },
+  { section: "1.1.1.3", title: "Attached garages", page: 7, level: 3, entry_type: "section", parent_section: "1.1.1", full_path: "Part 1 > Introduction > Scope > Attached garages" },
+  
+  { section: "1.1.2", title: "Items outside the scope of this document", page: 7, level: 2, entry_type: "section", parent_section: "1.1", full_path: "Part 1 > Introduction > Items outside scope" },
+  { section: "1.1.2.1", title: "General exclusions", page: 7, level: 3, entry_type: "section", parent_section: "1.1.2", full_path: "Part 1 > Introduction > Outside scope > General exclusions" },
+  { section: "1.1.2.2", title: "Outbuildings and unlined structures", page: 7, level: 3, entry_type: "section", parent_section: "1.1.2", full_path: "Part 1 > Introduction > Outside scope > Outbuildings" },
+  { section: "1.1.2.3", title: "Drained cavities with fire spread requirements", page: 7, level: 3, entry_type: "section", parent_section: "1.1.2", full_path: "Part 1 > Introduction > Outside scope > Fire spread" },
+  { section: "1.1.2.4", title: "Drained cavities with acoustic requirements", page: 7, level: 3, entry_type: "section", parent_section: "1.1.2", full_path: "Part 1 > Introduction > Outside scope > Acoustic requirements" },
+  { section: "1.1.2.5", title: "Snow melt water ingress", page: 8, level: 3, entry_type: "section", parent_section: "1.1.2", full_path: "Part 1 > Introduction > Outside scope > Snow areas" },
+  
+  { section: "1.1.3", title: "Compliance pathway", page: 8, level: 2, entry_type: "section", parent_section: "1.1", full_path: "Part 1 > Introduction > Compliance pathway" },
+  { section: "1.1.3.1", title: "Building Code compliance", page: 8, level: 3, entry_type: "section", parent_section: "1.1.3", full_path: "Part 1 > Introduction > Compliance > Building Code" },
+  { section: "1.1.3.2", title: "Alternative means of compliance", page: 8, level: 3, entry_type: "section", parent_section: "1.1.3", full_path: "Part 1 > Introduction > Compliance > Alternatives" },
+  
+  { section: "1.2", title: "Using this acceptable solution", page: 8, level: 1, entry_type: "section", parent_section: "1", full_path: "Part 1 > Using this acceptable solution" },
+  { section: "1.2.1", title: "Qualifications", page: 8, level: 2, entry_type: "section", parent_section: "1.2", full_path: "Part 1 > Using > Qualifications" },
+  { section: "1.2.1.1", title: "Restricted Building Work", page: 8, level: 3, entry_type: "section", parent_section: "1.2.1", full_path: "Part 1 > Using > Qualifications > Restricted work" },
+  { section: "1.2.1.2", title: "Licensed Building Practitioners", page: 8, level: 3, entry_type: "section", parent_section: "1.2.1", full_path: "Part 1 > Using > Qualifications > LBP requirements" },
+  
+  { section: "1.2.2", title: "Content of this acceptable solution", page: 9, level: 2, entry_type: "section", parent_section: "1.2", full_path: "Part 1 > Using > Content" },
+  { section: "1.2.2.1", title: "Document organization", page: 9, level: 3, entry_type: "section", parent_section: "1.2.2", full_path: "Part 1 > Using > Content > Organization" },
+  
+  { section: "1.2.3", title: "Building Product Specifications", page: 9, level: 2, entry_type: "section", parent_section: "1.2", full_path: "Part 1 > Using > Product specifications" },
+  { section: "1.2.3.1", title: "Referenced specifications", page: 9, level: 3, entry_type: "section", parent_section: "1.2.3", full_path: "Part 1 > Using > Product specs > References" },
+  { section: "1.2.3.2", title: "Standalone use limitations", page: 9, level: 3, entry_type: "section", parent_section: "1.2.3", full_path: "Part 1 > Using > Product specs > Limitations" },
+  
+  // PART 2: CLADDING SYSTEMS AND MATERIALS (Pages 10-11)
+  { section: "2", title: "CLADDING SYSTEMS AND MATERIALS", page: 10, level: 0, entry_type: "section", parent_section: null, full_path: "Part 2: Cladding systems and materials" },
+  
+  { section: "2.1", title: "Cladding systems", page: 10, level: 1, entry_type: "section", parent_section: "2", full_path: "Part 2 > Cladding systems" },
+  { section: "2.1.1", title: "Selection of materials", page: 10, level: 2, entry_type: "section", parent_section: "2.1", full_path: "Part 2 > Cladding systems > Selection" },
+  { section: "2.1.1.1", title: "Material suitability requirements", page: 10, level: 3, entry_type: "section", parent_section: "2.1.1", full_path: "Part 2 > Cladding systems > Selection > Requirements" },
+  
+  { section: "2.1.2", title: "Systems versus materials", page: 10, level: 2, entry_type: "section", parent_section: "2.1", full_path: "Part 2 > Cladding systems > Systems vs materials" },
+  { section: "2.1.2.1", title: "System approach", page: 10, level: 3, entry_type: "section", parent_section: "2.1.2", full_path: "Part 2 > Cladding systems > Systems > Approach" },
+  
+  { section: "2.1.3", title: "Cladding finish colours", page: 10, level: 2, entry_type: "section", parent_section: "2.1", full_path: "Part 2 > Cladding systems > Finish colours" },
+  { section: "2.1.3.1", title: "Reflectivity requirements", page: 10, level: 3, entry_type: "section", parent_section: "2.1.3", full_path: "Part 2 > Cladding systems > Colours > Reflectivity" },
+  
+  { section: "2.2", title: "Maintenance", page: 10, level: 1, entry_type: "section", parent_section: "2", full_path: "Part 2 > Maintenance" },
+  { section: "2.2.1", title: "Maintenance to achieve durability", page: 10, level: 2, entry_type: "section", parent_section: "2.2", full_path: "Part 2 > Maintenance > Durability" },
+  { section: "2.2.1.1", title: "General maintenance requirements", page: 10, level: 3, entry_type: "section", parent_section: "2.2.1", full_path: "Part 2 > Maintenance > Durability > General" },
+  { section: "2.2.1.2", title: "Factors affecting maintenance", page: 10, level: 3, entry_type: "section", parent_section: "2.2.1", full_path: "Part 2 > Maintenance > Durability > Factors" },
+  
+  { section: "2.2.2", title: "Regular maintenance", page: 11, level: 2, entry_type: "section", parent_section: "2.2", full_path: "Part 2 > Maintenance > Regular maintenance" },
+  { section: "2.2.2.1", title: "Maintenance activities", page: 11, level: 3, entry_type: "section", parent_section: "2.2.2", full_path: "Part 2 > Maintenance > Regular > Activities" },
+  
+  // PART 3: WEATHERTIGHTNESS RISK FACTORS (Pages 12-16)
+  { section: "3", title: "WEATHERTIGHTNESS RISK FACTORS", page: 12, level: 0, entry_type: "section", parent_section: null, full_path: "Part 3: Weathertightness risk factors" },
+  
+  { section: "3.1", title: "Establishing the risk", page: 12, level: 1, entry_type: "section", parent_section: "3", full_path: "Part 3 > Establishing the risk" },
+  { section: "3.1.1", title: "Risk assessment", page: 12, level: 2, entry_type: "section", parent_section: "3.1", full_path: "Part 3 > Risk > Assessment" },
+  { section: "3.1.1.1", title: "Risk matrix methodology", page: 12, level: 3, entry_type: "section", parent_section: "3.1.1", full_path: "Part 3 > Risk > Assessment > Matrix" },
+  { section: "Figure 3.1.1.1", title: "How to assess risk", page: 13, level: 4, entry_type: "figure", parent_section: "3.1.1", full_path: "Part 3 > Risk > Assessment > Figure 3.1.1.1" },
+  
+  { section: "3.1.2", title: "Definitions of risk", page: 14, level: 2, entry_type: "section", parent_section: "3.1", full_path: "Part 3 > Risk > Definitions" },
+  { section: "3.1.2.1", title: "Risk level definitions", page: 14, level: 3, entry_type: "section", parent_section: "3.1.2", full_path: "Part 3 > Risk > Definitions > Levels" },
+  { section: "Table 3.1.2.1", title: "Definitions of risk levels", page: 14, level: 4, entry_type: "table", parent_section: "3.1.2", full_path: "Part 3 > Risk > Definitions > Table 3.1.2.1" },
+  
+  { section: "3.1.3", title: "The risk score", page: 15, level: 2, entry_type: "section", parent_section: "3.1", full_path: "Part 3 > Risk > Score" },
+  { section: "3.1.3.1", title: "Risk matrix application", page: 15, level: 3, entry_type: "section", parent_section: "3.1.3", full_path: "Part 3 > Risk > Score > Matrix" },
+  { section: "Table 3.1.3.1", title: "Building envelope risk matrix", page: 15, level: 4, entry_type: "table", parent_section: "3.1.3", full_path: "Part 3 > Risk > Score > Table 3.1.3.1" },
+  { section: "3.1.3.2", title: "Calculating risk scores", page: 15, level: 3, entry_type: "section", parent_section: "3.1.3", full_path: "Part 3 > Risk > Score > Calculation" },
+  { section: "Table 3.1.3.2", title: "Suitable wall claddings", page: 16, level: 4, entry_type: "table", parent_section: "3.1.3", full_path: "Part 3 > Risk > Score > Table 3.1.3.2" },
+  { section: "3.1.3.3", title: "Examples in Appendix D", page: 16, level: 3, entry_type: "section", parent_section: "3.1.3", full_path: "Part 3 > Risk > Score > Examples" },
+  
+  { section: "3.1.4", title: "Wall cladding systems", page: 16, level: 2, entry_type: "section", parent_section: "3.1", full_path: "Part 3 > Risk > Cladding systems" },
+  { section: "3.1.4.1", title: "Systems covered", page: 16, level: 3, entry_type: "section", parent_section: "3.1.4", full_path: "Part 3 > Risk > Cladding > Covered systems" },
+  { section: "3.1.4.2", title: "Systems outside scope", page: 16, level: 3, entry_type: "section", parent_section: "3.1.4", full_path: "Part 3 > Risk > Cladding > Excluded systems" },
+  
+  // PART 4: FLASHINGS (Pages 17-26)
+  { section: "4", title: "FLASHINGS", page: 17, level: 0, entry_type: "section", parent_section: null, full_path: "Part 4: Flashings" },
+  
+  { section: "4.1", title: "Demonstrating compliance", page: 17, level: 1, entry_type: "section", parent_section: "4", full_path: "Part 4 > Demonstrating compliance" },
+  { section: "4.1.1", title: "Overview", page: 17, level: 2, entry_type: "section", parent_section: "4.1", full_path: "Part 4 > Compliance > Overview" },
+  { section: "4.1.1.1", title: "Flashing requirements", page: 17, level: 3, entry_type: "section", parent_section: "4.1.1", full_path: "Part 4 > Compliance > Overview > Requirements" },
+  
+  { section: "4.2", title: "Materials", page: 17, level: 1, entry_type: "section", parent_section: "4", full_path: "Part 4 > Materials" },
+  { section: "4.2.1", title: "Selection of flashing materials", page: 17, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Selection" },
+  { section: "4.2.1.1", title: "Selection factors", page: 17, level: 3, entry_type: "section", parent_section: "4.2.1", full_path: "Part 4 > Materials > Selection > Factors" },
+  { section: "4.2.1.2", title: "Exposure conditions", page: 17, level: 3, entry_type: "section", parent_section: "4.2.1", full_path: "Part 4 > Materials > Selection > Exposure" },
+  { section: "4.2.1.3", title: "Metal contact considerations", page: 17, level: 3, entry_type: "section", parent_section: "4.2.1", full_path: "Part 4 > Materials > Selection > Metal contact" },
+  { section: "4.2.1.4", title: "Chemical contaminants", page: 18, level: 3, entry_type: "section", parent_section: "4.2.1", full_path: "Part 4 > Materials > Selection > Contaminants" },
+  { section: "4.2.1.5", title: "Material suitability tables", page: 18, level: 3, entry_type: "section", parent_section: "4.2.1", full_path: "Part 4 > Materials > Selection > Tables" },
+  
+  { section: "4.2.2", title: "uPVC flashings", page: 18, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > uPVC" },
+  { section: "4.2.2.1", title: "Thickness requirements", page: 18, level: 3, entry_type: "section", parent_section: "4.2.2", full_path: "Part 4 > Materials > uPVC > Thickness" },
+  { section: "4.2.2.2", title: "Standards compliance", page: 18, level: 3, entry_type: "section", parent_section: "4.2.2", full_path: "Part 4 > Materials > uPVC > Standards" },
+  { section: "4.2.2.3", title: "Weather exposure requirements", page: 18, level: 3, entry_type: "section", parent_section: "4.2.2", full_path: "Part 4 > Materials > uPVC > Weather" },
+  { section: "4.2.2.4", title: "Colour reflectance", page: 18, level: 3, entry_type: "section", parent_section: "4.2.2", full_path: "Part 4 > Materials > uPVC > Colour" },
+  
+  { section: "4.2.3", title: "Aluminium flashings", page: 18, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Aluminium" },
+  { section: "4.2.3.1", title: "Specifications", page: 18, level: 3, entry_type: "section", parent_section: "4.2.3", full_path: "Part 4 > Materials > Aluminium > Specifications" },
+  
+  { section: "4.2.4", title: "Galvanized steel flashings", page: 18, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Galvanized steel" },
+  { section: "4.2.4.1", title: "Requirements", page: 18, level: 3, entry_type: "section", parent_section: "4.2.4", full_path: "Part 4 > Materials > Galvanized steel > Requirements" },
+  
+  { section: "4.2.5", title: "Aluminium-zinc-magnesium coated steel flashings", page: 18, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Aluminium-zinc-magnesium" },
+  { section: "4.2.5.1", title: "Coating specifications", page: 18, level: 3, entry_type: "section", parent_section: "4.2.5", full_path: "Part 4 > Materials > AZM > Specifications" },
+  
+  { section: "4.2.6", title: "Stainless steel flashings", page: 18, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Stainless steel" },
+  { section: "4.2.6.1", title: "Grade requirements", page: 18, level: 3, entry_type: "section", parent_section: "4.2.6", full_path: "Part 4 > Materials > Stainless steel > Grades" },
+  
+  { section: "4.2.7", title: "Copper flashings", page: 19, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Copper" },
+  { section: "4.2.7.1", title: "Specifications", page: 19, level: 3, entry_type: "section", parent_section: "4.2.7", full_path: "Part 4 > Materials > Copper > Specifications" },
+  
+  { section: "4.2.8", title: "Lead sheet flashings", page: 19, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Lead" },
+  { section: "4.2.8.1", title: "Requirements", page: 19, level: 3, entry_type: "section", parent_section: "4.2.8", full_path: "Part 4 > Materials > Lead > Requirements" },
+  
+  { section: "4.2.9", title: "Zinc sheet flashings", page: 19, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Zinc" },
+  { section: "4.2.9.1", title: "Usage limitations", page: 19, level: 3, entry_type: "section", parent_section: "4.2.9", full_path: "Part 4 > Materials > Zinc > Limitations" },
+  { section: "4.2.9.2", title: "Specifications", page: 19, level: 3, entry_type: "section", parent_section: "4.2.9", full_path: "Part 4 > Materials > Zinc > Specifications" },
+  
+  { section: "4.2.10", title: "Butyl rubber and EPDM flashings", page: 19, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Butyl and EPDM" },
+  { section: "4.2.10.1", title: "Usage limitations", page: 19, level: 3, entry_type: "section", parent_section: "4.2.10", full_path: "Part 4 > Materials > Butyl EPDM > Limitations" },
+  { section: "4.2.10.2", title: "Thickness and compliance", page: 19, level: 3, entry_type: "section", parent_section: "4.2.10", full_path: "Part 4 > Materials > Butyl EPDM > Thickness" },
+  
+  { section: "4.2.11", title: "Bituminous flashings", page: 19, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Bituminous" },
+  { section: "4.2.11.1", title: "Usage scope", page: 19, level: 3, entry_type: "section", parent_section: "4.2.11", full_path: "Part 4 > Materials > Bituminous > Scope" },
+  { section: "4.2.11.2", title: "Material requirements", page: 19, level: 3, entry_type: "section", parent_section: "4.2.11", full_path: "Part 4 > Materials > Bituminous > Requirements" },
+  
+  { section: "4.2.12", title: "Flexible flashing tape", page: 19, level: 2, entry_type: "section", parent_section: "4.2", full_path: "Part 4 > Materials > Flexible tape" },
+  { section: "4.2.12.1", title: "Compliance criteria", page: 19, level: 3, entry_type: "section", parent_section: "4.2.12", full_path: "Part 4 > Materials > Tape > Criteria" },
+  
+  { section: "4.3", title: "Fixings", page: 19, level: 1, entry_type: "section", parent_section: "4", full_path: "Part 4 > Fixings" },
+  { section: "4.3.1", title: "Fixings of flashings", page: 19, level: 2, entry_type: "section", parent_section: "4.3", full_path: "Part 4 > Fixings > Requirements" },
+  { section: "4.3.1.1", title: "Metal flashing fixings", page: 19, level: 3, entry_type: "section", parent_section: "4.3.1", full_path: "Part 4 > Fixings > Metal fixings" },
+  { section: "4.3.1.2", title: "Exposed flashings", page: 20, level: 3, entry_type: "section", parent_section: "4.3.1", full_path: "Part 4 > Fixings > Exposed fixings" },
+  
+  { section: "4.4", title: "Flashing requirements", page: 20, level: 1, entry_type: "section", parent_section: "4", full_path: "Part 4 > Flashing requirements" },
+  { section: "4.4.1", title: "Flashing locations", page: 20, level: 2, entry_type: "section", parent_section: "4.4", full_path: "Part 4 > Requirements > Locations" },
+  { section: "4.4.1.1", title: "Sensitive areas", page: 20, level: 3, entry_type: "section", parent_section: "4.4.1", full_path: "Part 4 > Requirements > Locations > Areas" },
+  
+  { section: "4.4.2", title: "Expansion joints in flashings", page: 20, level: 2, entry_type: "section", parent_section: "4.4", full_path: "Part 4 > Requirements > Expansion joints" },
+  { section: "4.4.2.1", title: "Joint requirements", page: 20, level: 3, entry_type: "section", parent_section: "4.4.2", full_path: "Part 4 > Requirements > Expansion > Requirements" },
+  
+  { section: "4.4.3", title: "Edge treatments for flashings", page: 20, level: 2, entry_type: "section", parent_section: "4.4", full_path: "Part 4 > Requirements > Edge treatments" },
+  { section: "4.4.3.1", title: "Dimension requirements", page: 20, level: 3, entry_type: "section", parent_section: "4.4.3", full_path: "Part 4 > Requirements > Edges > Dimensions" },
+  { section: "4.4.3.2", title: "Bottom edge treatments", page: 20, level: 3, entry_type: "section", parent_section: "4.4.3", full_path: "Part 4 > Requirements > Edges > Bottom edges" },
+  { section: "Figure 4.4.3.2", title: "Typical metal flashing edge treatments", page: 21, level: 4, entry_type: "figure", parent_section: "4.4.3", full_path: "Part 4 > Requirements > Edges > Figure 4.4.3.2" },
+  { section: "4.4.3.3", title: "Upstand treatments for standard wind zones", page: 21, level: 3, entry_type: "section", parent_section: "4.4.3", full_path: "Part 4 > Requirements > Edges > Standard upstands" },
+  { section: "4.4.3.4", title: "Extra High wind zone requirements", page: 22, level: 3, entry_type: "section", parent_section: "4.4.3", full_path: "Part 4 > Requirements > Edges > Extra High wind" },
+  
+  { section: "4.4.4", title: "Metal flashing joints", page: 22, level: 2, entry_type: "section", parent_section: "4.4", full_path: "Part 4 > Requirements > Joints" },
+  { section: "4.4.4.1", title: "Joint methods", page: 22, level: 3, entry_type: "section", parent_section: "4.4.4", full_path: "Part 4 > Requirements > Joints > Methods" },
+  { section: "Figure 4.4.4.1", title: "Joints in metal flashings", page: 22, level: 4, entry_type: "figure", parent_section: "4.4.4", full_path: "Part 4 > Requirements > Joints > Figure 4.4.4.1" },
+  
+  { section: "4.5", title: "Flashing overlaps and upstands", page: 22, level: 1, entry_type: "section", parent_section: "4", full_path: "Part 4 > Overlaps and upstands" },
+  { section: "4.5.1", title: "Flashing edges", page: 22, level: 2, entry_type: "section", parent_section: "4.5", full_path: "Part 4 > Overlaps > Edges" },
+  { section: "4.5.1.1", title: "Overlap specifications", page: 22, level: 3, entry_type: "section", parent_section: "4.5.1", full_path: "Part 4 > Overlaps > Edges > Specifications" },
+  { section: "Table 4.5.1.1", title: "General dimensions of metal flashings and other flashings as listed", page: 23, level: 4, entry_type: "table", parent_section: "4.5.1", full_path: "Part 4 > Overlaps > Edges > Table 4.5.1.1" },
+  { section: "4.5.1.2", title: "Edge treatment requirements", page: 24, level: 3, entry_type: "section", parent_section: "4.5.1", full_path: "Part 4 > Overlaps > Edges > Treatments" },
+  { section: "4.5.1.3", title: "Turn-down options", page: 24, level: 3, entry_type: "section", parent_section: "4.5.1", full_path: "Part 4 > Overlaps > Edges > Turn-down" },
+  { section: "4.5.1.4", title: "Notched turn-down gaps", page: 24, level: 3, entry_type: "section", parent_section: "4.5.1", full_path: "Part 4 > Overlaps > Edges > Notched gaps" },
+  
+  { section: "4.5.2", title: "Apron flashing cover to metal roofing", page: 24, level: 2, entry_type: "section", parent_section: "4.5", full_path: "Part 4 > Overlaps > Apron to metal" },
+  { section: "4.5.2.1", title: "Transverse flashing", page: 24, level: 3, entry_type: "section", parent_section: "4.5.2", full_path: "Part 4 > Overlaps > Apron > Transverse" },
+  { section: "Figure 4.5.2.1", title: "Basic apron flashing", page: 25, level: 4, entry_type: "figure", parent_section: "4.5.2", full_path: "Part 4 > Overlaps > Apron > Figure 4.5.2.1" },
+  { section: "4.5.2.2", title: "Parallel flashing", page: 24, level: 3, entry_type: "section", parent_section: "4.5.2", full_path: "Part 4 > Overlaps > Apron > Parallel" },
+  
+  { section: "4.5.3", title: "Roof-to-roof junction flashing cover for metal roofing", page: 25, level: 2, entry_type: "section", parent_section: "4.5", full_path: "Part 4 > Overlaps > Roof-to-roof" },
+  { section: "4.5.3.1", title: "Ridges and hips", page: 25, level: 3, entry_type: "section", parent_section: "4.5.3", full_path: "Part 4 > Overlaps > Roof junction > Ridges hips" },
+  { section: "4.5.3.2", title: "Change in roof pitch", page: 25, level: 3, entry_type: "section", parent_section: "4.5.3", full_path: "Part 4 > Overlaps > Roof junction > Pitch change" },
+  
+  { section: "4.5.4", title: "Roof edge junction flashing cover", page: 25, level: 2, entry_type: "section", parent_section: "4.5", full_path: "Part 4 > Overlaps > Roof edge" },
+  { section: "4.5.4.1", title: "Roof-to-wall junctions", page: 25, level: 3, entry_type: "section", parent_section: "4.5.4", full_path: "Part 4 > Overlaps > Edge > Wall junctions" },
+  { section: "4.5.4.2", title: "Barges", page: 25, level: 3, entry_type: "section", parent_section: "4.5.4", full_path: "Part 4 > Overlaps > Edge > Barges" },
+  
+  { section: "4.5.5", title: "Window, door, and inter-storey junction flashings", page: 25, level: 2, entry_type: "section", parent_section: "4.5", full_path: "Part 4 > Overlaps > Windows doors" },
+  { section: "4.5.5.1", title: "Window and door heads", page: 25, level: 3, entry_type: "section", parent_section: "4.5.5", full_path: "Part 4 > Overlaps > Windows > Heads" },
+  { section: "4.5.5.2", title: "Inter-storey junctions", page: 26, level: 3, entry_type: "section", parent_section: "4.5.5", full_path: "Part 4 > Overlaps > Windows > Inter-storey" },
+  
+  // PART 5: ROOF-TO-WALL JUNCTIONS (Pages 27-29)
+  { section: "5", title: "ROOF-TO-WALL JUNCTIONS", page: 27, level: 0, entry_type: "section", parent_section: null, full_path: "Part 5: Roof-to-wall junctions" },
+  
+  { section: "5.1", title: "Demonstrating compliance", page: 27, level: 1, entry_type: "section", parent_section: "5", full_path: "Part 5 > Demonstrating compliance" },
+  { section: "5.1.1", title: "Overview", page: 27, level: 2, entry_type: "section", parent_section: "5.1", full_path: "Part 5 > Compliance > Overview" },
+  { section: "5.1.1.1", title: "Provisions scope", page: 27, level: 3, entry_type: "section", parent_section: "5.1.1", full_path: "Part 5 > Compliance > Overview > Scope" },
+  
+  { section: "5.1.2", title: "Apron flashings", page: 27, level: 2, entry_type: "section", parent_section: "5.1", full_path: "Part 5 > Compliance > Apron flashings" },
+  { section: "5.1.2.1", title: "Acceptable materials", page: 27, level: 3, entry_type: "section", parent_section: "5.1.2", full_path: "Part 5 > Apron > Materials" },
+  { section: "5.1.2.2", title: "Weathertight requirements", page: 27, level: 3, entry_type: "section", parent_section: "5.1.2", full_path: "Part 5 > Apron > Weathertight" },
+  { section: "5.1.2.3", title: "Wall cladding details", page: 27, level: 3, entry_type: "section", parent_section: "5.1.2", full_path: "Part 5 > Apron > Cladding details" },
+  { section: "5.1.2.4", title: "Kick-out or stopend", page: 28, level: 3, entry_type: "section", parent_section: "5.1.2", full_path: "Part 5 > Apron > Kick-out" },
+  { section: "Figure 5.1.2.4", title: "Gutter/wall junction", page: 28, level: 4, entry_type: "figure", parent_section: "5.1.2", full_path: "Part 5 > Apron > Figure 5.1.2.4" },
+  
+  { section: "5.1.3", title: "Gutters, barges, and fascias", page: 28, level: 2, entry_type: "section", parent_section: "5.1", full_path: "Part 5 > Compliance > Gutters barges fascias" },
+  { section: "5.1.3.1", title: "Termination requirements", page: 28, level: 3, entry_type: "section", parent_section: "5.1.3", full_path: "Part 5 > Gutters > Termination" },
+  { section: "5.1.3.2", title: "Gap requirements", page: 28, level: 3, entry_type: "section", parent_section: "5.1.3", full_path: "Part 5 > Gutters > Gaps" },
+  
+  { section: "5.1.4", title: "Soffits", page: 28, level: 2, entry_type: "section", parent_section: "5.1", full_path: "Part 5 > Compliance > Soffits" },
+  { section: "5.1.4.1", title: "Soffit lining installation", page: 28, level: 3, entry_type: "section", parent_section: "5.1.4", full_path: "Part 5 > Soffits > Installation" },
+  { section: "5.1.4.2", title: "Soffit finishing", page: 29, level: 3, entry_type: "section", parent_section: "5.1.4", full_path: "Part 5 > Soffits > Finishing" },
+  { section: "Figure 5.1.4.2", title: "Soffit/wall junction", page: 29, level: 4, entry_type: "figure", parent_section: "5.1.4", full_path: "Part 5 > Soffits > Figure 5.1.4.2" },
+  { section: "5.1.4.3", title: "Underlay requirements", page: 29, level: 3, entry_type: "section", parent_section: "5.1.4", full_path: "Part 5 > Soffits > Underlays" },
+  
+  // PART 6: PARAPETS (Pages 30-36)
+  { section: "6", title: "PARAPETS", page: 30, level: 0, entry_type: "section", parent_section: null, full_path: "Part 6: Parapets" },
+  
+  { section: "6.1", title: "Demonstrating compliance", page: 30, level: 1, entry_type: "section", parent_section: "6", full_path: "Part 6 > Demonstrating compliance" },
+  { section: "6.1.1", title: "Overview", page: 30, level: 2, entry_type: "section", parent_section: "6.1", full_path: "Part 6 > Compliance > Overview" },
+  { section: "6.1.1.1", title: "Parapet provisions", page: 30, level: 3, entry_type: "section", parent_section: "6.1.1", full_path: "Part 6 > Compliance > Overview > Provisions" },
+  { section: "6.1.1.2", title: "Capping exclusions", page: 30, level: 3, entry_type: "section", parent_section: "6.1.1", full_path: "Part 6 > Compliance > Overview > Exclusions" },
+  { section: "6.1.1.3", title: "Drained cavity requirements", page: 30, level: 3, entry_type: "section", parent_section: "6.1.1", full_path: "Part 6 > Compliance > Overview > Cavity" },
+  { section: "6.1.1.4", title: "Construction requirements", page: 30, level: 3, entry_type: "section", parent_section: "6.1.1", full_path: "Part 6 > Compliance > Overview > Construction" },
+  { section: "Figure 6.1.1.4A", title: "General construction of parapet and enclosed balustrade", page: 31, level: 4, entry_type: "figure", parent_section: "6.1.1", full_path: "Part 6 > Compliance > Overview > Figure 6.1.1.4A" },
+  { section: "Figure 6.1.1.4B", title: "General capping joints for parapets and enclosed balustrades", page: 32, level: 4, entry_type: "figure", parent_section: "6.1.1", full_path: "Part 6 > Compliance > Overview > Figure 6.1.1.4B" },
+  { section: "6.1.1.5", title: "Cladding system details", page: 32, level: 3, entry_type: "section", parent_section: "6.1.1", full_path: "Part 6 > Compliance > Overview > Cladding details" },
+  { section: "6.1.1.6", title: "Enclosed balustrades", page: 32, level: 3, entry_type: "section", parent_section: "6.1.1", full_path: "Part 6 > Compliance > Overview > Balustrades" },
+  
+  { section: "6.2", title: "Cappings", page: 33, level: 1, entry_type: "section", parent_section: "6", full_path: "Part 6 > Cappings" },
+  { section: "6.2.1", title: "Capping materials", page: 33, level: 2, entry_type: "section", parent_section: "6.2", full_path: "Part 6 > Cappings > Materials" },
+  { section: "6.2.1.1", title: "Acceptable materials", page: 33, level: 3, entry_type: "section", parent_section: "6.2.1", full_path: "Part 6 > Cappings > Materials > Acceptable" },
+  
+  { section: "6.2.2", title: "Metal cappings", page: 33, level: 2, entry_type: "section", parent_section: "6.2", full_path: "Part 6 > Cappings > Metal" },
+  { section: "6.2.2.1", title: "Installation requirements", page: 33, level: 3, entry_type: "section", parent_section: "6.2.2", full_path: "Part 6 > Cappings > Metal > Installation" },
+  { section: "6.2.2.2", title: "Coating applications", page: 34, level: 3, entry_type: "section", parent_section: "6.2.2", full_path: "Part 6 > Cappings > Metal > Coatings" },
+  
+  { section: "6.2.3", title: "Parapet-to-wall junctions with metal cappings", page: 34, level: 2, entry_type: "section", parent_section: "6.2", full_path: "Part 6 > Cappings > Wall junctions" },
+  { section: "6.2.3.1", title: "Junction flashing", page: 34, level: 3, entry_type: "section", parent_section: "6.2.3", full_path: "Part 6 > Cappings > Junctions > Flashing" },
+  { section: "Figure 6.2.3.1A", title: "Parapet/enclosed balustrade-to-wall junctions – plan section", page: 35, level: 4, entry_type: "figure", parent_section: "6.2.3", full_path: "Part 6 > Cappings > Junctions > Figure 6.2.3.1A" },
+  { section: "Figure 6.2.3.1B", title: "General junction of parapet and enclosed balustrade-to-wall with metal capping", page: 36, level: 4, entry_type: "figure", parent_section: "6.2.3", full_path: "Part 6 > Cappings > Junctions > Figure 6.2.3.1B" },
+  { section: "6.2.3.2", title: "In-plane parapets", page: 36, level: 3, entry_type: "section", parent_section: "6.2.3", full_path: "Part 6 > Cappings > Junctions > In-plane" },
+  
+  { section: "6.2.4", title: "Membrane cappings", page: 36, level: 2, entry_type: "section", parent_section: "6.2", full_path: "Part 6 > Cappings > Membrane" },
+  { section: "6.2.4.1", title: "Butyl and EPDM requirements", page: 36, level: 3, entry_type: "section", parent_section: "6.2.4", full_path: "Part 6 > Cappings > Membrane > Requirements" },
+  
+  { section: "6.2.5", title: "Integral surface cappings", page: 36, level: 2, entry_type: "section", parent_section: "6.2", full_path: "Part 6 > Cappings > Integral surface" },
+  { section: "6.2.5.1", title: "Usage limitations", page: 36, level: 3, entry_type: "section", parent_section: "6.2.5", full_path: "Part 6 > Cappings > Integral > Limitations" },
+  
+  // PART 7: DECKS AND PERGOLAS (Pages 37-44)
+  { section: "7", title: "DECKS AND PERGOLAS", page: 37, level: 0, entry_type: "section", parent_section: null, full_path: "Part 7: Decks and pergolas" },
+  
+  { section: "7.1", title: "Demonstrating compliance", page: 37, level: 1, entry_type: "section", parent_section: "7", full_path: "Part 7 > Demonstrating compliance" },
+  { section: "7.1.1", title: "Overview", page: 37, level: 2, entry_type: "section", parent_section: "7.1", full_path: "Part 7 > Compliance > Overview" },
+  { section: "7.1.1.1", title: "Deck and pergola provisions", page: 37, level: 3, entry_type: "section", parent_section: "7.1.1", full_path: "Part 7 > Compliance > Overview > Provisions" },
+  { section: "7.1.1.2", title: "Enclosed deck size limits", page: 37, level: 3, entry_type: "section", parent_section: "7.1.1", full_path: "Part 7 > Compliance > Overview > Size limits" },
+  { section: "7.1.1.3", title: "Wall cladding junctions", page: 37, level: 3, entry_type: "section", parent_section: "7.1.1", full_path: "Part 7 > Compliance > Overview > Junctions" },
+  
+  { section: "7.1.2", title: "Materials", page: 37, level: 2, entry_type: "section", parent_section: "7.1", full_path: "Part 7 > Compliance > Materials" },
+  { section: "7.1.2.1", title: "Timber specifications", page: 37, level: 3, entry_type: "section", parent_section: "7.1.2", full_path: "Part 7 > Compliance > Materials > Timber" },
+  
+  { section: "7.2", title: "Thresholds for decks", page: 37, level: 1, entry_type: "section", parent_section: "7", full_path: "Part 7 > Thresholds" },
+  { section: "7.2.1", title: "Threshold height above deck surface", page: 37, level: 2, entry_type: "section", parent_section: "7.2", full_path: "Part 7 > Thresholds > Height" },
+  { section: "7.2.1.1", title: "Vertical separation requirements", page: 37, level: 3, entry_type: "section", parent_section: "7.2.1", full_path: "Part 7 > Thresholds > Height > Separation" },
+  { section: "Figure 7.2.1.1", title: "Threshold separation", page: 38, level: 4, entry_type: "figure", parent_section: "7.2.1", full_path: "Part 7 > Thresholds > Height > Figure 7.2.1.1" },
+  { section: "7.2.1.2", title: "Opening threshold level", page: 38, level: 3, entry_type: "section", parent_section: "7.2.1", full_path: "Part 7 > Thresholds > Height > Opening level" },
+  
+  { section: "7.2.2", title: "Thresholds of slatted decks", page: 38, level: 2, entry_type: "section", parent_section: "7.2", full_path: "Part 7 > Thresholds > Slatted" },
+  { section: "7.2.2.1", title: "Upper surface level", page: 38, level: 3, entry_type: "section", parent_section: "7.2.2", full_path: "Part 7 > Thresholds > Slatted > Surface level" },
+  { section: "7.2.2.2", title: "Gap requirements", page: 38, level: 3, entry_type: "section", parent_section: "7.2.2", full_path: "Part 7 > Thresholds > Slatted > Gaps" },
+  
+  { section: "7.2.3", title: "Thresholds of enclosed decks", page: 38, level: 2, entry_type: "section", parent_section: "7.2", full_path: "Part 7 > Thresholds > Enclosed" },
+  { section: "7.2.3.1", title: "Vertical separation for enclosed", page: 38, level: 3, entry_type: "section", parent_section: "7.2.3", full_path: "Part 7 > Thresholds > Enclosed > Separation" },
+  
+  { section: "7.3", title: "Attachment to building structure", page: 38, level: 1, entry_type: "section", parent_section: "7", full_path: "Part 7 > Attachment" },
+  { section: "7.3.1", title: "Slatted non-cantilevered timber decks to walls", page: 38, level: 2, entry_type: "section", parent_section: "7.3", full_path: "Part 7 > Attachment > Slatted non-cantilever" },
+  { section: "7.3.1.1", title: "Junction weatherproofing", page: 38, level: 3, entry_type: "section", parent_section: "7.3.1", full_path: "Part 7 > Attachment > Non-cantilever > Weatherproofing" },
+  { section: "Figure 7.3.1.1", title: "Junction with wall for non-cantilevered timber deck", page: 39, level: 4, entry_type: "figure", parent_section: "7.3.1", full_path: "Part 7 > Attachment > Non-cantilever > Figure 7.3.1.1" },
+  { section: "7.3.1.2", title: "Stringer fixings", page: 39, level: 3, entry_type: "section", parent_section: "7.3.1", full_path: "Part 7 > Attachment > Non-cantilever > Fixings" },
+  { section: "7.3.1.3", title: "Surface coating sealing", page: 39, level: 3, entry_type: "section", parent_section: "7.3.1", full_path: "Part 7 > Attachment > Non-cantilever > Sealing" },
+  
+  { section: "7.3.2", title: "Slatted cantilevered timber decks to walls", page: 39, level: 2, entry_type: "section", parent_section: "7.3", full_path: "Part 7 > Attachment > Slatted cantilever" },
+  { section: "7.3.2.1", title: "Cantilevered junction weatherproofing", page: 39, level: 3, entry_type: "section", parent_section: "7.3.2", full_path: "Part 7 > Attachment > Cantilever > Weatherproofing" },
+  { section: "Figure 7.3.2.1", title: "Junction with wall for cantilevered timber deck", page: 40, level: 4, entry_type: "figure", parent_section: "7.3.2", full_path: "Part 7 > Attachment > Cantilever > Figure 7.3.2.1" },
+  
+  { section: "7.3.3", title: "Pergolas", page: 40, level: 2, entry_type: "section", parent_section: "7.3", full_path: "Part 7 > Attachment > Pergolas" },
+  { section: "7.3.3.1", title: "Pergola wall junctions", page: 40, level: 3, entry_type: "section", parent_section: "7.3.3", full_path: "Part 7 > Attachment > Pergolas > Junctions" },
+  
+  { section: "7.4", title: "Level thresholds", page: 40, level: 1, entry_type: "section", parent_section: "7", full_path: "Part 7 > Level thresholds" },
+  { section: "7.4.1", title: "Level access from enclosed decks", page: 40, level: 2, entry_type: "section", parent_section: "7.4", full_path: "Part 7 > Level > Enclosed decks" },
+  { section: "7.4.1.1", title: "Level access provision", page: 40, level: 3, entry_type: "section", parent_section: "7.4.1", full_path: "Part 7 > Level > Enclosed > Provision" },
+  { section: "Figure 7.4.1.1", title: "Level thresholds for enclosed decks", page: 41, level: 4, entry_type: "figure", parent_section: "7.4.1", full_path: "Part 7 > Level > Enclosed > Figure 7.4.1.1" },
+  { section: "7.4.1.2", title: "Raised removable surfaces", page: 41, level: 3, entry_type: "section", parent_section: "7.4.1", full_path: "Part 7 > Level > Enclosed > Removable" },
+  { section: "7.4.1.3", title: "Timber decking framing", page: 41, level: 3, entry_type: "section", parent_section: "7.4.1", full_path: "Part 7 > Level > Enclosed > Framing" },
+  
+  { section: "7.4.2", title: "Ground floor level access", page: 42, level: 2, entry_type: "section", parent_section: "7.4", full_path: "Part 7 > Level > Ground floor" },
+  { section: "7.4.2.1", title: "Ground level provision", page: 42, level: 3, entry_type: "section", parent_section: "7.4.2", full_path: "Part 7 > Level > Ground > Provision" },
+  { section: "Figure 7.4.2.1", title: "Level thresholds for ground level", page: 42, level: 4, entry_type: "figure", parent_section: "7.4.2", full_path: "Part 7 > Level > Ground > Figure 7.4.2.1" },
+  { section: "7.4.2.2", title: "Concrete slab to exterior paving", page: 42, level: 3, entry_type: "section", parent_section: "7.4.2", full_path: "Part 7 > Level > Ground > Concrete" },
+  { section: "7.4.2.3", title: "Timber floor to exterior", page: 43, level: 3, entry_type: "section", parent_section: "7.4.2", full_path: "Part 7 > Level > Ground > Timber floor" },
+  
+  { section: "7.5", title: "Enclosed balustrades", page: 43, level: 1, entry_type: "section", parent_section: "7", full_path: "Part 7 > Enclosed balustrades" },
+  { section: "7.5.1", title: "Cladding systems for enclosed balustrades", page: 43, level: 2, entry_type: "section", parent_section: "7.5", full_path: "Part 7 > Balustrades > Cladding systems" },
+  { section: "7.5.1.1", title: "Drained cavity requirements", page: 43, level: 3, entry_type: "section", parent_section: "7.5.1", full_path: "Part 7 > Balustrades > Cladding > Cavity" },
+  { section: "7.5.1.2", title: "Specific cladding details", page: 43, level: 3, entry_type: "section", parent_section: "7.5.1", full_path: "Part 7 > Balustrades > Cladding > Details" },
+  { section: "7.5.1.3", title: "Capping options", page: 43, level: 3, entry_type: "section", parent_section: "7.5.1", full_path: "Part 7 > Balustrades > Cladding > Cappings" },
+  
+  { section: "7.5.2", title: "Deck drainage", page: 43, level: 2, entry_type: "section", parent_section: "7.5", full_path: "Part 7 > Balustrades > Drainage" },
+  { section: "7.5.2.1", title: "Drainage provision", page: 43, level: 3, entry_type: "section", parent_section: "7.5.2", full_path: "Part 7 > Balustrades > Drainage > Provision" },
+  
+  { section: "7.5.3", title: "Balustrade-to-wall junctions", page: 43, level: 2, entry_type: "section", parent_section: "7.5", full_path: "Part 7 > Balustrades > Wall junctions" },
+  { section: "7.5.3.1", title: "Junction flashing", page: 43, level: 3, entry_type: "section", parent_section: "7.5.3", full_path: "Part 7 > Balustrades > Wall junction > Flashing" },
+  
+  { section: "7.5.4", title: "Balustrade-to-deck floor junctions", page: 43, level: 2, entry_type: "section", parent_section: "7.5", full_path: "Part 7 > Balustrades > Deck floor junctions" },
+  { section: "7.5.4.1", title: "Floor junction weatherproofing", page: 43, level: 3, entry_type: "section", parent_section: "7.5.4", full_path: "Part 7 > Balustrades > Floor junction > Weatherproofing" },
+  { section: "Figure 7.5.4.1", title: "Enclosed balustrade – bottom of cladding", page: 44, level: 4, entry_type: "figure", parent_section: "7.5.4", full_path: "Part 7 > Balustrades > Floor junction > Figure 7.5.4.1" },
+  
+  { section: "7.5.5", title: "Metal cappings", page: 44, level: 2, entry_type: "section", parent_section: "7.5", full_path: "Part 7 > Balustrades > Metal cappings" },
+  { section: "7.5.5.1", title: "Capping dimensions", page: 44, level: 3, entry_type: "section", parent_section: "7.5.5", full_path: "Part 7 > Balustrades > Metal > Dimensions" },
+  { section: "7.5.5.2", title: "Requirements for balustrade cappings", page: 44, level: 3, entry_type: "section", parent_section: "7.5.5", full_path: "Part 7 > Balustrades > Metal > Requirements" },
+  
+  { section: "7.5.6", title: "Stanchions", page: 44, level: 2, entry_type: "section", parent_section: "7.5", full_path: "Part 7 > Balustrades > Stanchions" },
+  { section: "7.5.6.1", title: "Stanchion fixing requirements", page: 44, level: 3, entry_type: "section", parent_section: "7.5.6", full_path: "Part 7 > Balustrades > Stanchions > Fixing" },
+  { section: "Figure 7.5.6.1", title: "Stanchion fixing", page: 44, level: 4, entry_type: "figure", parent_section: "7.5.6", full_path: "Part 7 > Balustrades > Stanchions > Figure 7.5.6.1" },
+  { section: "7.5.6.2", title: "Vertical surface fixing", page: 44, level: 3, entry_type: "section", parent_section: "7.5.6", full_path: "Part 7 > Balustrades > Stanchions > Vertical" },
+  
+  // PART 8: ROOF CLADDINGS (Pages 45-86)
+  { section: "8", title: "ROOF CLADDINGS", page: 45, level: 0, entry_type: "section", parent_section: null, full_path: "Part 8: Roof claddings" },
+  
+  { section: "8.1", title: "Demonstrating compliance", page: 45, level: 1, entry_type: "section", parent_section: "8", full_path: "Part 8 > Demonstrating compliance" },
+  { section: "8.1.1", title: "Overview", page: 45, level: 2, entry_type: "section", parent_section: "8.1", full_path: "Part 8 > Compliance > Overview" },
+  { section: "8.1.2", title: "General requirements", page: 45, level: 2, entry_type: "section", parent_section: "8.1", full_path: "Part 8 > Compliance > General" },
+  { section: "8.1.3", title: "Roof pitch", page: 46, level: 2, entry_type: "section", parent_section: "8.1", full_path: "Part 8 > Compliance > Pitch" },
+  { section: "8.1.4", title: "Roof discharge", page: 47, level: 2, entry_type: "section", parent_section: "8.1", full_path: "Part 8 > Compliance > Discharge" },
+  { section: "8.1.5", title: "Underlays", page: 48, level: 2, entry_type: "section", parent_section: "8.1", full_path: "Part 8 > Compliance > Underlays" },
+  { section: "8.1.6", title: "Valley gutters", page: 48, level: 2, entry_type: "section", parent_section: "8.1", full_path: "Part 8 > Compliance > Valley gutters" },
+  { section: "Table 8.1.6.1", title: "Maximum catchment areas for valley gutters", page: 49, level: 3, entry_type: "table", parent_section: "8.1.6", full_path: "Part 8 > Compliance > Valley > Table 8.1.6.1" },
+  { section: "8.1.7", title: "Penetrations", page: 49, level: 2, entry_type: "section", parent_section: "8.1", full_path: "Part 8 > Compliance > Penetrations" },
+  { section: "Table 8.1.7.2", title: "Maximum catchment areas above penetrations", page: 50, level: 3, entry_type: "table", parent_section: "8.1.7", full_path: "Part 8 > Compliance > Penetrations > Table 8.1.7.2" },
+  
+  { section: "8.2", title: "Masonry tiles", page: 50, level: 1, entry_type: "section", parent_section: "8", full_path: "Part 8 > Masonry tiles" },
+  { section: "8.2.1", title: "General", page: 50, level: 2, entry_type: "section", parent_section: "8.2", full_path: "Part 8 > Masonry tiles > General" },
+  { section: "8.2.2", title: "Materials", page: 51, level: 2, entry_type: "section", parent_section: "8.2", full_path: "Part 8 > Masonry tiles > Materials" },
+  { section: "8.2.3", title: "Roof pitch", page: 52, level: 2, entry_type: "section", parent_section: "8.2", full_path: "Part 8 > Masonry tiles > Pitch" },
+  { section: "Table 8.2.3.1", title: "Minimum pitches for masonry tiles", page: 52, level: 3, entry_type: "table", parent_section: "8.2.3", full_path: "Part 8 > Masonry tiles > Pitch > Table 8.2.3.1" },
+  { section: "8.2.4", title: "Installation", page: 53, level: 2, entry_type: "section", parent_section: "8.2", full_path: "Part 8 > Masonry tiles > Installation" },
+  { section: "8.2.5", title: "Flashings", page: 54, level: 2, entry_type: "section", parent_section: "8.2", full_path: "Part 8 > Masonry tiles > Flashings" },
+  { section: "Figure 8.2.5.1A", title: "Masonry tile ridge", page: 54, level: 3, entry_type: "figure", parent_section: "8.2.5", full_path: "Part 8 > Masonry tiles > Flashings > Figure 8.2.5.1A" },
+  { section: "Figure 8.2.5.1B", title: "Barge for masonry tile", page: 55, level: 3, entry_type: "figure", parent_section: "8.2.5", full_path: "Part 8 > Masonry tiles > Flashings > Figure 8.2.5.1B" },
+  
+  { section: "8.3", title: "Pressed metal tiles", page: 56, level: 1, entry_type: "section", parent_section: "8", full_path: "Part 8 > Pressed metal tiles" },
+  { section: "8.3.1", title: "General", page: 56, level: 2, entry_type: "section", parent_section: "8.3", full_path: "Part 8 > Metal tiles > General" },
+  { section: "8.3.2", title: "Materials", page: 57, level: 2, entry_type: "section", parent_section: "8.3", full_path: "Part 8 > Metal tiles > Materials" },
+  { section: "8.3.3", title: "Profiles", page: 58, level: 2, entry_type: "section", parent_section: "8.3", full_path: "Part 8 > Metal tiles > Profiles" },
+  { section: "Figure 8.3.3.1", title: "Metal tile profiles", page: 58, level: 3, entry_type: "figure", parent_section: "8.3.3", full_path: "Part 8 > Metal tiles > Profiles > Figure 8.3.3.1" },
+  { section: "8.3.4", title: "Roof pitch", page: 58, level: 2, entry_type: "section", parent_section: "8.3", full_path: "Part 8 > Metal tiles > Pitch" },
+  { section: "8.3.5", title: "Fixings", page: 59, level: 2, entry_type: "section", parent_section: "8.3", full_path: "Part 8 > Metal tiles > Fixings" },
+  { section: "8.3.6", title: "Flashings", page: 59, level: 2, entry_type: "section", parent_section: "8.3", full_path: "Part 8 > Metal tiles > Flashings" },
+  
+  { section: "8.4", title: "Profiled metal roof cladding", page: 60, level: 1, entry_type: "section", parent_section: "8", full_path: "Part 8 > Profiled metal" },
+  { section: "8.4.1", title: "General", page: 60, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > General" },
+  { section: "8.4.2", title: "Materials", page: 61, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Materials" },
+  { section: "8.4.3", title: "Profiles", page: 62, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Profiles" },
+  { section: "Figure 8.4.3.1", title: "Profiled metal profiles", page: 62, level: 3, entry_type: "figure", parent_section: "8.4.3", full_path: "Part 8 > Profiled metal > Profiles > Figure 8.4.3.1" },
+  { section: "8.4.4", title: "Roof pitch and span", page: 63, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Pitch and span" },
+  { section: "Table 8.4.4.2A", title: "Steel corrugated profiled roofing – 0.4 mm BMT", page: 64, level: 3, entry_type: "table", parent_section: "8.4.4", full_path: "Part 8 > Profiled metal > Pitch > Table 8.4.4.2A" },
+  { section: "Table 8.4.4.2B", title: "Steel corrugated profiled roofing – 0.55 mm BMT", page: 65, level: 3, entry_type: "table", parent_section: "8.4.4", full_path: "Part 8 > Profiled metal > Pitch > Table 8.4.4.2B" },
+  { section: "8.4.5", title: "Underlays", page: 66, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Underlays" },
+  { section: "8.4.6", title: "Fixings", page: 67, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Fixings" },
+  { section: "8.4.7", title: "Sheet laps", page: 69, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Sheet laps" },
+  { section: "8.4.8", title: "Thermal expansion", page: 70, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Thermal expansion" },
+  { section: "Table 8.4.8.1", title: "Expansion provisions", page: 70, level: 3, entry_type: "table", parent_section: "8.4.8", full_path: "Part 8 > Profiled metal > Expansion > Table 8.4.8.1" },
+  { section: "8.4.9", title: "Flashings", page: 71, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Flashings" },
+  { section: "8.4.10", title: "Stopends", page: 73, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Stopends" },
+  { section: "8.4.11", title: "Gutters", page: 73, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Gutters" },
+  { section: "8.4.12", title: "Penetrations", page: 74, level: 2, entry_type: "section", parent_section: "8.4", full_path: "Part 8 > Profiled metal > Penetrations" },
+  { section: "Table 8.4.12.1", title: "Catchment areas for profiled metal", page: 75, level: 3, entry_type: "table", parent_section: "8.4.12", full_path: "Part 8 > Profiled metal > Penetrations > Table 8.4.12.1" },
+  
+  { section: "8.5", title: "Membrane roofs and decks", page: 76, level: 1, entry_type: "section", parent_section: "8", full_path: "Part 8 > Membrane roofs" },
+  { section: "8.5.1", title: "General", page: 76, level: 2, entry_type: "section", parent_section: "8.5", full_path: "Part 8 > Membrane > General" },
+  { section: "8.5.2", title: "Materials", page: 77, level: 2, entry_type: "section", parent_section: "8.5", full_path: "Part 8 > Membrane > Materials" },
+  { section: "8.5.3", title: "Substrate", page: 79, level: 2, entry_type: "section", parent_section: "8.5", full_path: "Part 8 > Membrane > Substrate" },
+  { section: "8.5.4", title: "Falls and drainage", page: 80, level: 2, entry_type: "section", parent_section: "8.5", full_path: "Part 8 > Membrane > Falls and drainage" },
+  { section: "8.5.5", title: "Installation", page: 82, level: 2, entry_type: "section", parent_section: "8.5", full_path: "Part 8 > Membrane > Installation" },
+  { section: "8.5.6", title: "Edges and upstands", page: 83, level: 2, entry_type: "section", parent_section: "8.5", full_path: "Part 8 > Membrane > Edges" },
+  { section: "8.5.7", title: "Penetrations", page: 85, level: 2, entry_type: "section", parent_section: "8.5", full_path: "Part 8 > Membrane > Penetrations" },
+  { section: "8.5.8", title: "Outlets", page: 86, level: 2, entry_type: "section", parent_section: "8.5", full_path: "Part 8 > Membrane > Outlets" },
+  
+  // PART 9: WALL CLADDINGS (Pages 87-168) - Largest section
+  { section: "9", title: "WALL CLADDINGS", page: 87, level: 0, entry_type: "section", parent_section: null, full_path: "Part 9: Wall claddings" },
+  
+  { section: "9.1", title: "Demonstrating compliance", page: 87, level: 1, entry_type: "section", parent_section: "9", full_path: "Part 9 > Demonstrating compliance" },
+  { section: "9.1.1", title: "Overview", page: 87, level: 2, entry_type: "section", parent_section: "9.1", full_path: "Part 9 > Compliance > Overview" },
+  { section: "9.1.2", title: "Ground clearance", page: 88, level: 2, entry_type: "section", parent_section: "9.1", full_path: "Part 9 > Compliance > Ground clearance" },
+  { section: "Table 9.1.2.1", title: "Minimum clearances for timber", page: 89, level: 3, entry_type: "table", parent_section: "9.1.2", full_path: "Part 9 > Compliance > Ground > Table 9.1.2.1" },
+  { section: "9.1.3", title: "Direct-fixed claddings", page: 90, level: 2, entry_type: "section", parent_section: "9.1", full_path: "Part 9 > Compliance > Direct-fixed" },
+  { section: "9.1.4", title: "Cavity construction", page: 91, level: 2, entry_type: "section", parent_section: "9.1", full_path: "Part 9 > Compliance > Cavity" },
+  { section: "9.1.5", title: "Wall underlays", page: 93, level: 2, entry_type: "section", parent_section: "9.1", full_path: "Part 9 > Compliance > Underlays" },
+  { section: "9.1.6", title: "Framing", page: 95, level: 2, entry_type: "section", parent_section: "9.1", full_path: "Part 9 > Compliance > Framing" },
+  { section: "9.1.7", title: "Cavity battens", page: 96, level: 2, entry_type: "section", parent_section: "9.1", full_path: "Part 9 > Compliance > Cavity battens" },
+  { section: "9.1.8", title: "Junctions and penetrations", page: 98, level: 2, entry_type: "section", parent_section: "9.1", full_path: "Part 9 > Compliance > Junctions" },
+  { section: "9.1.9", title: "Windows and doors", page: 100, level: 2, entry_type: "section", parent_section: "9.1", full_path: "Part 9 > Compliance > Windows and doors" },
+  { section: "9.1.10", title: "Flashings", page: 102, level: 2, entry_type: "section", parent_section: "9.1", full_path: "Part 9 > Compliance > Flashings" },
+  
+  { section: "9.2", title: "Masonry veneer", page: 104, level: 1, entry_type: "section", parent_section: "9", full_path: "Part 9 > Masonry veneer" },
+  { section: "9.2.1", title: "General", page: 104, level: 2, entry_type: "section", parent_section: "9.2", full_path: "Part 9 > Masonry veneer > General" },
+  { section: "9.2.2", title: "Materials", page: 105, level: 2, entry_type: "section", parent_section: "9.2", full_path: "Part 9 > Masonry veneer > Materials" },
+  { section: "9.2.3", title: "Construction", page: 107, level: 2, entry_type: "section", parent_section: "9.2", full_path: "Part 9 > Masonry veneer > Construction" },
+  { section: "9.2.4", title: "Cavity", page: 109, level: 2, entry_type: "section", parent_section: "9.2", full_path: "Part 9 > Masonry veneer > Cavity" },
+  { section: "9.2.5", title: "Ties", page: 110, level: 2, entry_type: "section", parent_section: "9.2", full_path: "Part 9 > Masonry veneer > Ties" },
+  { section: "9.2.6", title: "Flashings", page: 112, level: 2, entry_type: "section", parent_section: "9.2", full_path: "Part 9 > Masonry veneer > Flashings" },
+  
+  { section: "9.3", title: "Stucco", page: 115, level: 1, entry_type: "section", parent_section: "9", full_path: "Part 9 > Stucco" },
+  { section: "9.3.1", title: "General", page: 115, level: 2, entry_type: "section", parent_section: "9.3", full_path: "Part 9 > Stucco > General" },
+  { section: "9.3.2", title: "Materials", page: 115, level: 2, entry_type: "section", parent_section: "9.3", full_path: "Part 9 > Stucco > Materials" },
+  { section: "9.3.3", title: "Substrate", page: 116, level: 2, entry_type: "section", parent_section: "9.3", full_path: "Part 9 > Stucco > Substrate" },
+  { section: "9.3.4", title: "Application", page: 117, level: 2, entry_type: "section", parent_section: "9.3", full_path: "Part 9 > Stucco > Application" },
+  { section: "9.3.5", title: "Flashings", page: 118, level: 2, entry_type: "section", parent_section: "9.3", full_path: "Part 9 > Stucco > Flashings" },
+  
+  { section: "9.4", title: "Timber weatherboards", page: 119, level: 1, entry_type: "section", parent_section: "9", full_path: "Part 9 > Timber weatherboards" },
+  { section: "9.4.1", title: "General", page: 119, level: 2, entry_type: "section", parent_section: "9.4", full_path: "Part 9 > Timber weatherboards > General" },
+  { section: "9.4.2", title: "Materials", page: 120, level: 2, entry_type: "section", parent_section: "9.4", full_path: "Part 9 > Timber weatherboards > Materials" },
+  { section: "9.4.3", title: "Profiles", page: 122, level: 2, entry_type: "section", parent_section: "9.4", full_path: "Part 9 > Timber weatherboards > Profiles" },
+  { section: "9.4.4", title: "Fixings", page: 123, level: 2, entry_type: "section", parent_section: "9.4", full_path: "Part 9 > Timber weatherboards > Fixings" },
+  { section: "9.4.5", title: "Installation", page: 125, level: 2, entry_type: "section", parent_section: "9.4", full_path: "Part 9 > Timber weatherboards > Installation" },
+  { section: "9.4.6", title: "Flashings", page: 127, level: 2, entry_type: "section", parent_section: "9.4", full_path: "Part 9 > Timber weatherboards > Flashings" },
+  { section: "9.4.7", title: "Finishing", page: 129, level: 2, entry_type: "section", parent_section: "9.4", full_path: "Part 9 > Timber weatherboards > Finishing" },
+  
+  { section: "9.5", title: "Fibre cement weatherboards", page: 130, level: 1, entry_type: "section", parent_section: "9", full_path: "Part 9 > Fibre cement weatherboards" },
+  { section: "9.5.1", title: "General", page: 130, level: 2, entry_type: "section", parent_section: "9.5", full_path: "Part 9 > Fibre cement weatherboards > General" },
+  { section: "9.5.2", title: "Materials", page: 131, level: 2, entry_type: "section", parent_section: "9.5", full_path: "Part 9 > Fibre cement weatherboards > Materials" },
+  { section: "9.5.3", title: "Fixings", page: 132, level: 2, entry_type: "section", parent_section: "9.5", full_path: "Part 9 > Fibre cement weatherboards > Fixings" },
+  { section: "9.5.4", title: "Installation", page: 133, level: 2, entry_type: "section", parent_section: "9.5", full_path: "Part 9 > Fibre cement weatherboards > Installation" },
+  
+  { section: "9.6", title: "Profiled metal wall cladding", page: 135, level: 1, entry_type: "section", parent_section: "9", full_path: "Part 9 > Profiled metal wall" },
+  { section: "9.6.1", title: "General", page: 135, level: 2, entry_type: "section", parent_section: "9.6", full_path: "Part 9 > Profiled metal > General" },
+  { section: "9.6.2", title: "Materials", page: 136, level: 2, entry_type: "section", parent_section: "9.6", full_path: "Part 9 > Profiled metal > Materials" },
+  { section: "9.6.3", title: "Profiles", page: 137, level: 2, entry_type: "section", parent_section: "9.6", full_path: "Part 9 > Profiled metal > Profiles" },
+  { section: "9.6.4", title: "Vertical installation", page: 138, level: 2, entry_type: "section", parent_section: "9.6", full_path: "Part 9 > Profiled metal > Vertical" },
+  { section: "9.6.5", title: "Horizontal installation", page: 140, level: 2, entry_type: "section", parent_section: "9.6", full_path: "Part 9 > Profiled metal > Horizontal" },
+  { section: "9.6.6", title: "Flashings", page: 142, level: 2, entry_type: "section", parent_section: "9.6", full_path: "Part 9 > Profiled metal > Flashings" },
+  { section: "9.6.7", title: "Penetrations", page: 144, level: 2, entry_type: "section", parent_section: "9.6", full_path: "Part 9 > Profiled metal > Penetrations" },
+  
+  { section: "9.7", title: "Fibre cement sheet", page: 145, level: 1, entry_type: "section", parent_section: "9", full_path: "Part 9 > Fibre cement sheet" },
+  { section: "9.7.1", title: "General", page: 145, level: 2, entry_type: "section", parent_section: "9.7", full_path: "Part 9 > Fibre cement sheet > General" },
+  { section: "9.7.2", title: "Materials", page: 146, level: 2, entry_type: "section", parent_section: "9.7", full_path: "Part 9 > Fibre cement sheet > Materials" },
+  { section: "9.7.3", title: "Sheet sizes", page: 148, level: 2, entry_type: "section", parent_section: "9.7", full_path: "Part 9 > Fibre cement sheet > Sizes" },
+  { section: "9.7.4", title: "Fixings", page: 149, level: 2, entry_type: "section", parent_section: "9.7", full_path: "Part 9 > Fibre cement sheet > Fixings" },
+  { section: "9.7.5", title: "Installation", page: 151, level: 2, entry_type: "section", parent_section: "9.7", full_path: "Part 9 > Fibre cement sheet > Installation" },
+  { section: "9.7.6", title: "Joints", page: 154, level: 2, entry_type: "section", parent_section: "9.7", full_path: "Part 9 > Fibre cement sheet > Joints" },
+  { section: "9.7.7", title: "Flashings", page: 156, level: 2, entry_type: "section", parent_section: "9.7", full_path: "Part 9 > Fibre cement sheet > Flashings" },
+  
+  { section: "9.8", title: "Plywood sheet", page: 158, level: 1, entry_type: "section", parent_section: "9", full_path: "Part 9 > Plywood sheet" },
+  { section: "9.8.1", title: "General", page: 158, level: 2, entry_type: "section", parent_section: "9.8", full_path: "Part 9 > Plywood > General" },
+  { section: "9.8.2", title: "Materials", page: 158, level: 2, entry_type: "section", parent_section: "9.8", full_path: "Part 9 > Plywood > Materials" },
+  { section: "9.8.3", title: "Installation", page: 159, level: 2, entry_type: "section", parent_section: "9.8", full_path: "Part 9 > Plywood > Installation" },
+  { section: "9.8.4", title: "Finishing", page: 160, level: 2, entry_type: "section", parent_section: "9.8", full_path: "Part 9 > Plywood > Finishing" },
+  
+  { section: "9.9", title: "EIFS", page: 161, level: 1, entry_type: "section", parent_section: "9", full_path: "Part 9 > EIFS" },
+  { section: "9.9.1", title: "General", page: 161, level: 2, entry_type: "section", parent_section: "9.9", full_path: "Part 9 > EIFS > General" },
+  { section: "9.9.2", title: "Materials", page: 162, level: 2, entry_type: "section", parent_section: "9.9", full_path: "Part 9 > EIFS > Materials" },
+  { section: "9.9.3", title: "Substrate", page: 164, level: 2, entry_type: "section", parent_section: "9.9", full_path: "Part 9 > EIFS > Substrate" },
+  { section: "9.9.4", title: "Installation", page: 165, level: 2, entry_type: "section", parent_section: "9.9", full_path: "Part 9 > EIFS > Installation" },
+  { section: "9.9.5", title: "Reinforcing mesh", page: 166, level: 2, entry_type: "section", parent_section: "9.9", full_path: "Part 9 > EIFS > Mesh" },
+  { section: "9.9.6", title: "Joints", page: 167, level: 2, entry_type: "section", parent_section: "9.9", full_path: "Part 9 > EIFS > Joints" },
+  { section: "9.9.7", title: "Finishing", page: 167, level: 2, entry_type: "section", parent_section: "9.9", full_path: "Part 9 > EIFS > Finishing" },
+  { section: "9.9.8", title: "Flashings", page: 168, level: 2, entry_type: "section", parent_section: "9.9", full_path: "Part 9 > EIFS > Flashings" },
+  { section: "9.9.9", title: "Penetrations", page: 168, level: 2, entry_type: "section", parent_section: "9.9", full_path: "Part 9 > EIFS > Penetrations" },
+  
+  // PART 10: CONSTRUCTION MOISTURE (Pages 169-170)
+  { section: "10", title: "CONSTRUCTION MOISTURE", page: 169, level: 0, entry_type: "section", parent_section: null, full_path: "Part 10: Construction moisture" },
+  
+  { section: "10.1", title: "Managing construction moisture", page: 169, level: 1, entry_type: "section", parent_section: "10", full_path: "Part 10 > Managing moisture" },
+  { section: "10.1.1", title: "General requirements", page: 169, level: 2, entry_type: "section", parent_section: "10.1", full_path: "Part 10 > Managing > General" },
+  { section: "10.1.2", title: "Moisture protection", page: 169, level: 2, entry_type: "section", parent_section: "10.1", full_path: "Part 10 > Managing > Protection" },
+  
+  { section: "10.2", title: "Measuring moisture content", page: 169, level: 1, entry_type: "section", parent_section: "10", full_path: "Part 10 > Measuring moisture" },
+  { section: "10.2.1", title: "Moisture content limits", page: 169, level: 2, entry_type: "section", parent_section: "10.2", full_path: "Part 10 > Measuring > Limits" },
+  { section: "10.2.2", title: "Testing methods", page: 170, level: 2, entry_type: "section", parent_section: "10.2", full_path: "Part 10 > Measuring > Methods" },
+  
+  // APPENDICES (Pages 171-194)
+  { section: "Appendix A", title: "REFERENCES", page: 171, level: 0, entry_type: "appendix", parent_section: null, full_path: "Appendix A: References" },
+  { section: "A.1", title: "Referenced documents", page: 171, level: 1, entry_type: "section", parent_section: "Appendix A", full_path: "Appendix A > Referenced documents" },
+  { section: "A.2", title: "Standards and specifications", page: 171, level: 1, entry_type: "section", parent_section: "Appendix A", full_path: "Appendix A > Standards" },
+  
+  { section: "Appendix B", title: "DEFINITIONS", page: 175, level: 0, entry_type: "appendix", parent_section: null, full_path: "Appendix B: Definitions" },
+  { section: "B.1", title: "General terms", page: 175, level: 1, entry_type: "section", parent_section: "Appendix B", full_path: "Appendix B > General terms" },
+  { section: "B.2", title: "Technical definitions", page: 176, level: 1, entry_type: "section", parent_section: "Appendix B", full_path: "Appendix B > Technical" },
+  
+  { section: "Appendix C", title: "MATERIAL TABLES", page: 181, level: 0, entry_type: "appendix", parent_section: null, full_path: "Appendix C: Material tables" },
+  { section: "C.1", title: "Materials", page: 181, level: 1, entry_type: "section", parent_section: "Appendix C", full_path: "Appendix C > Materials" },
+  { section: "C.1.1", title: "Material compatibility", page: 181, level: 2, entry_type: "section", parent_section: "C.1", full_path: "Appendix C > Materials > Compatibility" },
+  { section: "Table C.1.1.1A", title: "Suitability of materials - Low wind zone", page: 182, level: 3, entry_type: "table", parent_section: "C.1.1", full_path: "Appendix C > Materials > Table C.1.1.1A" },
+  { section: "Table C.1.1.1B", title: "Suitability of materials - Medium to High wind zones", page: 183, level: 3, entry_type: "table", parent_section: "C.1.1", full_path: "Appendix C > Materials > Table C.1.1.1B" },
+  { section: "Table C.1.1.1C", title: "Suitability of materials - Very High to Extra High wind zones", page: 184, level: 3, entry_type: "table", parent_section: "C.1.1", full_path: "Appendix C > Materials > Table C.1.1.1C" },
+  
+  { section: "C.2", title: "Underlays and membranes", page: 185, level: 1, entry_type: "section", parent_section: "Appendix C", full_path: "Appendix C > Underlays" },
+  { section: "Table C.2.1", title: "Properties of underlays", page: 185, level: 2, entry_type: "table", parent_section: "C.2", full_path: "Appendix C > Underlays > Table C.2.1" },
+  
+  { section: "C.3", title: "Fixing selection", page: 186, level: 1, entry_type: "section", parent_section: "Appendix C", full_path: "Appendix C > Fixings" },
+  { section: "Table C.3.1", title: "Nail and screw specifications", page: 186, level: 2, entry_type: "table", parent_section: "C.3", full_path: "Appendix C > Fixings > Table C.3.1" },
+  
+  { section: "Appendix D", title: "EXAMPLES USING THE RISK MATRIX", page: 190, level: 0, entry_type: "appendix", parent_section: null, full_path: "Appendix D: Risk matrix examples" },
+  { section: "D.1", title: "Simple buildings – example 1", page: 190, level: 1, entry_type: "section", parent_section: "Appendix D", full_path: "Appendix D > Simple buildings" },
+  { section: "D.1.1", title: "Building description", page: 190, level: 2, entry_type: "section", parent_section: "D.1", full_path: "Appendix D > Simple > Description" },
+  { section: "D.1.2", title: "Risk assessment", page: 190, level: 2, entry_type: "section", parent_section: "D.1", full_path: "Appendix D > Simple > Assessment" },
+  
+  { section: "D.2", title: "Moderately complex buildings – example 2", page: 191, level: 1, entry_type: "section", parent_section: "Appendix D", full_path: "Appendix D > Moderate buildings" },
+  { section: "D.2.1", title: "Building description", page: 191, level: 2, entry_type: "section", parent_section: "D.2", full_path: "Appendix D > Moderate > Description" },
+  { section: "D.2.2", title: "Risk assessment", page: 192, level: 2, entry_type: "section", parent_section: "D.2", full_path: "Appendix D > Moderate > Assessment" },
+  
+  { section: "D.3", title: "Complex buildings – example 3", page: 194, level: 1, entry_type: "section", parent_section: "Appendix D", full_path: "Appendix D > Complex buildings" },
+  { section: "D.3.1", title: "Building description", page: 194, level: 2, entry_type: "section", parent_section: "D.3", full_path: "Appendix D > Complex > Description" },
+  { section: "D.3.2", title: "Risk assessment", page: 194, level: 2, entry_type: "section", parent_section: "D.3", full_path: "Appendix D > Complex > Assessment" },
+  
+]
+ 
+export const E2_EXTERNAL_MOISTURE_CONFIG = {
+  standard_code: 'E2_AS1_2025',
+  title: 'E2/AS1 External Moisture - Fourth Edition',
+  total_pages: 194,
+  pdf_page_offset: 0,
+  filename_pattern: /e2|external.*moisture|moisture/i,
+  toc: E2_EXTERNAL_MOISTURE_TOC
+}
+
+
+
+
 // ADD THIS FUNCTION - detects which document based on filename
 export function detectDocumentType(filename) {
   const name = filename.toLowerCase();
