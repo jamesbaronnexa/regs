@@ -13,7 +13,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('documents')
     .select('id, filename, title, uploaded_at, pdf_page_offset')
-    .eq('is_verified', true)
+    //.eq('is_verified', true)
     .order('uploaded_at', { ascending: false })
   
   if (error) {
