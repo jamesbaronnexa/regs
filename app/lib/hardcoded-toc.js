@@ -2452,6 +2452,12 @@ export function detectDocumentType(filename) {
   if (name.includes('3000')) {
     return AS_NZS_3000_CONFIG;
   }
+
+   // Check for E2 External Moisture
+  if (name.includes('e2') || name.includes('moisture') || name.includes('external')) {
+    console.log('Matched E2 External Moisture');
+    return E2_EXTERNAL_MOISTURE_CONFIG;
+  }
   
   // Add more document types here as you expand
    if (name.includes('3008')) {
