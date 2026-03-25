@@ -153,7 +153,7 @@ export default function UploadPage() {
             <strong>Supported documents:</strong> AS/NZS 3604, E2/AS1 External Moisture
           </p>
           <p className="text-xs text-blue-700 mt-1">
-            Filename must contain: "3604", "e2", "moisture", etc.
+            Filename must contain: &quot;3604&quot;, &quot;e2&quot;, &quot;moisture&quot;, etc.
           </p>
         </div>
         
