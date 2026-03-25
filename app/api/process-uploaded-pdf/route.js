@@ -73,11 +73,16 @@ export async function POST(request) {
     console.log(`Detected document: ${docConfig.title}`)
     
     // Check if this standard is already indexed
-    const { data: existingRef } = await supabase
+    console.log('Checking if standard is already indexed...')
+    const { data: existingRef, error: refCheckError } = await supabase
       .from('reference_documents')
       .select('id, indexed_at, total_pages')
       .eq('standard_code', docConfig.standard_code)
       .single()
+    
+    if (refCheckError && refCheckError.code !== 'PGRST116') {
+      console.error('Error checking reference:', refCheckError)
+    }
     
     // Create document record
     console.log('Creating document record...')
@@ -100,28 +105,35 @@ export async function POST(request) {
     
     // If already fully indexed, skip TOC creation
     if (existingRef && existingRef.indexed_at) {
-      console.log(`Standard already indexed! Using shared content`)
+      console.log(`Standard already indexed! Reference ID: ${existingRef.id}`)
+      console.log(`Indexed pages: ${existingRef.total_pages}`)
+      console.log('Skipping TOC creation - using shared reference content')
       
       return NextResponse.json({
         success: true,
         documentId: docData.id,
         fileName: fileName,
-        message: `${docConfig.title} ready - using pre-indexed content!`,
-        alreadyIndexed: true
+        message: `${docConfig.title} detected - using pre-indexed content for instant search!`,
+        alreadyIndexed: true,
+        referenceDocId: existingRef.id,
+        totalPages: existingRef.total_pages,
+        tocCount: docConfig.toc.length
       })
     }
     
-    // Create TOC entries
-    console.log('Creating TOC entries...')
+    // Create TOC if first time indexing
+    console.log('First time indexing - creating TOC entries...')
     
     const { count: existingTocCount } = await supabase
       .from('toc')
       .select('*', { count: 'exact', head: true })
       .eq('document_id', docData.id)
     
-    let tocCount = existingTocCount || 0
+    console.log(`Existing TOC entries for document ${docData.id}: ${existingTocCount || 0}`)
     
+    let tocCount = existingTocCount || 0
     if (tocCount === 0) {
+      console.log('Creating TOC entries with enhanced fields...')
       const tocEntries = docConfig.toc.map(entry => ({
         document_id: docData.id,
         section_number: entry.section,
@@ -136,21 +148,75 @@ export async function POST(request) {
       // Insert in batches of 50
       for (let i = 0; i < tocEntries.length; i += 50) {
         const batch = tocEntries.slice(i, i + 50)
-        const { error } = await supabase.from('toc').insert(batch)
-        if (error) throw error
+        console.log(`Inserting TOC batch ${Math.floor(i/50) + 1}/${Math.ceil(tocEntries.length/50)}`)
+        const { error } = await supabase
+          .from('toc')
+          .insert(batch)
+        
+        if (error) {
+          console.error('Batch insert error:', error)
+          throw error
+        }
       }
-      
       tocCount = tocEntries.length
-      console.log(`Created ${tocCount} TOC entries`)
+      console.log(`Created ${tocEntries.length} TOC entries with enhanced metadata`)
       
       // Generate embeddings
-      console.log('Generating embeddings...')
+      console.log('Generating embeddings for TOC entries...')
       try {
         await generateTocEmbeddings(docData.id, docConfig.toc)
         console.log('Embeddings generated successfully')
       } catch (embeddingError) {
         console.error('Warning: Embedding generation failed:', embeddingError)
       }
+      
+    } else {
+      console.log(`Using existing ${tocCount} TOC entries`)
+    }
+    
+    // Create or get reference document
+    let referenceDocId = existingRef?.id
+    
+    if (!referenceDocId) {
+      console.log('Creating reference document entry...')
+      const { data: refDoc, error: refError } = await supabase
+        .from('reference_documents')
+        .insert({
+          standard_code: docConfig.standard_code,
+          title: docConfig.title,
+          total_pages: docConfig.total_pages
+        })
+        .select()
+        .single()
+      
+      if (refError) throw refError
+      referenceDocId = refDoc.id
+      console.log(`Reference document created with ID: ${referenceDocId}`)
+    }
+    
+    // Check if content already exists
+    const { count: contentCount } = await supabase
+      .from('reference_content')
+      .select('*', { count: 'exact', head: true })
+      .eq('reference_doc_id', referenceDocId)
+    
+    console.log(`Existing content pages: ${contentCount || 0}`)
+    
+    const needsIndexing = !contentCount || contentCount < (docConfig.total_pages * 0.9)
+    
+    if (needsIndexing) {
+      console.log('Azure indexing required - ready to trigger indexing process')
+      return NextResponse.json({
+        success: true,
+        documentId: docData.id,
+        fileName: fileName,
+        referenceDocId: referenceDocId,
+        message: `${docConfig.title} uploaded. Ready for Azure indexing...`,
+        needsIndexing: true,
+        existingPages: contentCount || 0,
+        tocCount: tocCount,
+        totalPages: docConfig.total_pages
+      })
     }
     
     return NextResponse.json({
@@ -158,7 +224,8 @@ export async function POST(request) {
       documentId: docData.id,
       fileName: fileName,
       message: `${docConfig.title} processed successfully!`,
-      tocCount: tocCount
+      tocCount: tocCount,
+      totalPages: docConfig.total_pages
     })
     
   } catch (error) {
